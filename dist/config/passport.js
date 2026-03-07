@@ -1,0 +1,100 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const passport_1 = __importDefault(require("passport"));
+const passport_facebook_1 = require("passport-facebook");
+const passport_linkedin_oauth2_1 = require("passport-linkedin-oauth2");
+const passport_microsoft_1 = require("passport-microsoft");
+const passport_google_oauth20_1 = require("passport-google-oauth20");
+const authService = require('../services/auth.service').AuthService;
+const service = new authService();
+// Facebook Strategy
+passport_1.default.use(new passport_facebook_1.Strategy({
+    clientID: process.env.FACEBOOK_APP_ID || '',
+    clientSecret: process.env.FACEBOOK_APP_SECRET || '',
+    callbackURL: process.env.FACEBOOK_CALLBACK_URL || 'http://localhost:3000/api/auth/facebook/callback',
+    profileFields: ['id', 'displayName', 'email', 'picture', 'first_name', 'last_name']
+}, async (accessToken, refreshToken, profile, done) => {
+    try {
+        const { user, token } = await service.findOrCreateUser({
+            ...profile,
+            accessToken,
+            refreshToken,
+            emails: profile.emails
+        }, 'facebook');
+        return done(null, { user, token });
+    }
+    catch (error) {
+        return done(error);
+    }
+}));
+// LinkedIn Strategy
+passport_1.default.use(new passport_linkedin_oauth2_1.Strategy({
+    clientID: process.env.LINKEDIN_CLIENT_ID || '',
+    clientSecret: process.env.LINKEDIN_CLIENT_SECRET || '',
+    callbackURL: process.env.LINKEDIN_CALLBACK_URL || 'http://localhost:3000/api/auth/linkedin/callback',
+    scope: ['r_emailaddress', 'r_liteprofile']
+}, async (accessToken, refreshToken, profile, done) => {
+    try {
+        const { user, token } = await service.findOrCreateUser({
+            ...profile,
+            accessToken,
+            refreshToken,
+            emails: profile.emails
+        }, 'linkedin');
+        return done(null, { user, token });
+    }
+    catch (error) {
+        return done(error);
+    }
+}));
+// Google Strategy
+passport_1.default.use(new passport_google_oauth20_1.Strategy({
+    clientID: process.env.GOOGLE_CLIENT_ID || '',
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+    callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3000/api/auth/google/callback'
+}, async (accessToken, refreshToken, profile, done) => {
+    try {
+        const { user, token } = await service.findOrCreateUser({
+            ...profile,
+            accessToken,
+            refreshToken,
+            emails: profile.emails
+        }, 'google');
+        return done(null, { user, token });
+    }
+    catch (error) {
+        return done(error);
+    }
+}));
+// Microsoft Strategy
+passport_1.default.use(new passport_microsoft_1.Strategy({
+    clientID: process.env.MICROSOFT_CLIENT_ID || '',
+    clientSecret: process.env.MICROSOFT_CLIENT_SECRET || '',
+    callbackURL: process.env.MICROSOFT_CALLBACK_URL || 'http://localhost:3000/api/auth/microsoft/callback',
+    scope: ['user.read', 'mail.read']
+}, async (accessToken, refreshToken, profile, done) => {
+    try {
+        const { user, token } = await service.findOrCreateUser({
+            ...profile,
+            accessToken,
+            refreshToken,
+            emails: profile.emails
+        }, 'microsoft');
+        return done(null, { user, token });
+    }
+    catch (error) {
+        return done(error, undefined);
+    }
+}));
+// Serialize user
+passport_1.default.serializeUser((user, done) => {
+    done(null, user);
+});
+// Deserialize user
+passport_1.default.deserializeUser((user, done) => {
+    done(null, user);
+});
+exports.default = passport_1.default;
