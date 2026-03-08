@@ -20,7 +20,7 @@ require("./config/passport");
 // Import middleware
 const auth_1 = require("./middleware/auth");
 const app = (0, express_1.default)();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 10000;
 // Body parser middleware
 app.use(express_1.default.json({ limit: '50mb' }));
 app.use(express_1.default.urlencoded({ limit: '50mb', extended: true }));
