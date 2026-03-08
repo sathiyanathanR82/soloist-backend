@@ -20,7 +20,7 @@ import './config/passport';
 import { corsHeaders } from './middleware/auth';
 
 const app: Express = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 10000;
 
 // Body parser middleware
 app.use(express.json({ limit: '50mb' }));
@@ -90,7 +90,7 @@ const startServer = async () => {
   try {
     await connectDB();
     
-    app.listen(port, () => {
+    app.listen(port,() => {
       console.log(`🚀 Server is running on port ${port}`);
       console.log(`Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:4200'}`);
     });
