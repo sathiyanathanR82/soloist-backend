@@ -1,5 +1,7 @@
 import mongoose from 'mongoose';
 
+// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+
 export const connectDB = async () => {
   try {
     const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/soloist';
