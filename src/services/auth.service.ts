@@ -3,13 +3,15 @@ import { generateToken } from '../utils/jwt';
 
 export class AuthService {
   
-  async findOrCreateUser(profile: any, provider: string): Promise<{ user: IUser; token: string }> {
+  async findOrCreateUser(profile: any, provider: string): Promise<{ user: IUser; token: string; isNewUser: boolean }> {
     try {
       const email = profile.emails?.[0]?.value || profile.email;
       
       let user = await User.findOne({ email });
+      let isNewUser = false;
       
       if (!user) {
+        isNewUser = true;
         user = new User({
           email,
           firstName: profile.name?.givenName || profile.displayName?.split(' ')[0] || '',
@@ -44,7 +46,7 @@ export class AuthService {
       
       const token = generateToken(user._id.toString());
       
-      return { user, token };
+      return { user, token, isNewUser };
     } catch (error) {
       throw new Error(`Failed to find or create user: ${error}`);
     }

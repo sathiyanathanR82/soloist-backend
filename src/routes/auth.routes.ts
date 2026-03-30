@@ -12,9 +12,9 @@ router.get('/facebook', passport.authenticate('facebook', { scope: ['email', 'pu
 router.get('/facebook/callback',
   passport.authenticate('facebook', { failureRedirect: '/' }),
   (req: any, res) => {
-    const token = req.user.token;
+    const { token, isNewUser } = req.user;
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
-    res.redirect(`${frontendUrl}/profile?token=${token}`);
+    res.redirect(`${frontendUrl}/profile?token=${token}&isNewUser=${isNewUser}`);
   }
 );
 
@@ -24,9 +24,9 @@ router.get('/linkedin', passport.authenticate('linkedin', { scope: ['r_emailaddr
 router.get('/linkedin/callback',
   passport.authenticate('linkedin', { failureRedirect: '/' }),
   (req: any, res) => {
-    const token = req.user.token;
+    const { token, isNewUser } = req.user;
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
-    res.redirect(`${frontendUrl}/profile?token=${token}`);
+    res.redirect(`${frontendUrl}/profile?token=${token}&isNewUser=${isNewUser}`);
   }
 );
 
@@ -36,9 +36,9 @@ router.get('/google', passport.authenticate('google', { scope: ['email', 'profil
 router.get('/google/callback',
   passport.authenticate('google', { failureRedirect: '/' }),
   (req: any, res) => {
-    const token = req.user.token;
+    const { token, isNewUser } = req.user;
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
-    res.redirect(`${frontendUrl}/profile?token=${token}`);
+    res.redirect(`${frontendUrl}/profile?token=${token}&isNewUser=${isNewUser}`);
   }
 );
 
@@ -48,9 +48,21 @@ router.get('/microsoft', passport.authenticate('microsoft', { scope: ['user.read
 router.get('/microsoft/callback',
   passport.authenticate('microsoft', { failureRedirect: '/' }),
   (req: any, res) => {
-    const token = req.user.token;
+    const { token, isNewUser } = req.user;
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
-    res.redirect(`${frontendUrl}/profile?token=${token}`);
+    res.redirect(`${frontendUrl}/profile?token=${token}&isNewUser=${isNewUser}`);
+  }
+);
+
+// Yahoo OAuth
+router.get('/yahoo', passport.authenticate('yahoo', { scope: ['openid', 'profile', 'email'] }));
+
+router.get('/yahoo/callback',
+  passport.authenticate('yahoo', { failureRedirect: '/' }),
+  (req: any, res) => {
+    const { token, isNewUser } = req.user;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
+    res.redirect(`${frontendUrl}/profile?token=${token}&isNewUser=${isNewUser}`);
   }
 );
 
