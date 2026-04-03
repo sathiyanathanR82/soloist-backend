@@ -69,13 +69,13 @@ npm start
 - `GET /api/auth/microsoft` - Microsoft OAuth login
 - `GET /api/auth/microsoft/callback` - Microsoft OAuth callback
 - `POST /api/auth/logout` - Logout user
-- `GET /api/auth/me` - Get current user (protected route)
+- `GET /api/auth/me` - Get current user (protected route; JWT `userId` is the user's `uid`)
 
 ### User Profile Routes
 
-- `GET /api/users/:id` - Get user profile
-- `PUT /api/users/:id` - Update user profile
-- `DELETE /api/users/:id` - Delete user account
+- `GET /api/users/:id` - Get user profile (where `:id` is the user's unique UID)
+- `PUT /api/users/:id` - Update user profile (where `:id` is the user's unique UID)
+- `DELETE /api/users/:id` - Delete user account (where `:id` is the user's unique UID)
 
 ## Project Structure
 

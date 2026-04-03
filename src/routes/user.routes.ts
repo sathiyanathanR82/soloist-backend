@@ -10,6 +10,7 @@ router.get('/:id', authMiddleware, userController.getUserProfile.bind(userContro
 
 // Update user profile
 router.put('/:id', authMiddleware, userController.updateUserProfile.bind(userController));
+router.patch('/:id', authMiddleware, userController.updateUserProfile.bind(userController));
 
 // Delete user account
 router.delete('/:id', authMiddleware, userController.deleteUserAccount.bind(userController));

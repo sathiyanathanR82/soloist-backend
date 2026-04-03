@@ -1,6 +1,8 @@
+import crypto from 'crypto';
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IUser extends Document {
+  uid: string;
   email: string;
   firstName: string;
   lastName: string;
@@ -11,7 +13,8 @@ export interface IUser extends Document {
   headline?: string;
   bio?: string;
   website?: string;
-  avatar?: string;
+  profilePic?: string;
+  registerUser?: boolean;
   providers: {
     name: string;
     id: string;
@@ -25,6 +28,12 @@ export interface IUser extends Document {
 
 const userSchema = new Schema<IUser>(
   {
+    uid: {
+      type: String,
+      required: true,
+      unique: true,
+      default: () => crypto.randomUUID()
+    },
     email: {
       type: String,
       required: true,
@@ -70,9 +79,13 @@ const userSchema = new Schema<IUser>(
       type: String,
       default: ''
     },
-    avatar: {
+    profilePic: {
       type: String,
       default: null
+    },
+    registerUser: {
+      type: Boolean,
+      default: false
     },
     providers: [
       {

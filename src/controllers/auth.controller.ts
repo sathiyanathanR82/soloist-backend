@@ -38,8 +38,11 @@ export class AuthController {
   async getCurrentUser(req: AuthRequest, res: Response) {
     try {
       const userId = req.user?.userId;
+      console.log('getCurrentUser: userId from token:', userId);
+      console.log('getCurrentUser: req.user:', req.user);
 
       if (!userId) {
+        console.error('getCurrentUser: No userId found in token');
         return res.status(401).json({
           success: false,
           message: 'User not authenticated',
@@ -48,8 +51,10 @@ export class AuthController {
       }
 
       const user = await authService.getUserById(userId);
+      console.log('getCurrentUser: user from database:', user);
 
       if (!user) {
+        console.error('getCurrentUser: User not found in database for userId:', userId);
         return res.status(404).json({
           success: false,
           message: 'User not found',
@@ -62,10 +67,14 @@ export class AuthController {
         message: 'User retrieved successfully',
         data: user
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('getCurrentUser error:', error);
+      console.error('Error message:', error?.message);
+      console.error('Error stack:', error?.stack);
       res.status(500).json({
         success: false,
         message: 'Failed to get current user',
+        error: process.env.NODE_ENV === 'development' ? error?.message : undefined,
         data: null
       });
     }

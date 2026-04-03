@@ -9,6 +9,7 @@ const userController = new user_controller_1.UserController();
 router.get('/:id', auth_1.authMiddleware, userController.getUserProfile.bind(userController));
 // Update user profile
 router.put('/:id', auth_1.authMiddleware, userController.updateUserProfile.bind(userController));
+router.patch('/:id', auth_1.authMiddleware, userController.updateUserProfile.bind(userController));
 // Delete user account
 router.delete('/:id', auth_1.authMiddleware, userController.deleteUserAccount.bind(userController));
 // Get all users (admin)

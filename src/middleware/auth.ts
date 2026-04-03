@@ -10,6 +10,7 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
     const token = req.headers.authorization?.split(' ')[1];
     
     if (!token) {
+      console.error('authMiddleware: No token provided');
       return res.status(401).json({
         success: false,
         message: 'No token provided'
@@ -18,15 +19,18 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
 
     const decoded = verifyToken(token);
     if (!decoded) {
+      console.error('authMiddleware: Token verification failed');
       return res.status(401).json({
         success: false,
         message: 'Invalid token'
       });
     }
 
+    console.log('authMiddleware: Token verified successfully', { userId: decoded?.userId });
     req.user = decoded;
     next();
-  } catch (error) {
+  } catch (error: any) {
+    console.error('authMiddleware: Authentication failed', error);
     return res.status(401).json({
       success: false,
       message: 'Authentication failed'

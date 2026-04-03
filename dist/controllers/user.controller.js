@@ -32,25 +32,38 @@ class UserController {
     async updateUserProfile(req, res) {
         try {
             const { id } = req.params;
-            const { firstName, lastName, dateOfBirth, gender, phone, location, headline, bio, website } = req.body;
-            if (req.user?.userId !== id) {
+            const currentUserId = req.user?.userId || req.user?.id;
+            const allowedFields = [
+                'firstName',
+                'lastName',
+                'dateOfBirth',
+                'gender',
+                'phone',
+                'location',
+                'headline',
+                'bio',
+                'website'
+            ];
+            if (currentUserId !== id) {
                 return res.status(403).json({
                     success: false,
                     message: 'Forbidden: Cannot update another user profile',
                     data: null
                 });
             }
-            const profileData = {
-                firstName,
-                lastName,
-                dateOfBirth,
-                gender,
-                phone,
-                location,
-                headline,
-                bio,
-                website
-            };
+            const profileData = {};
+            allowedFields.forEach((field) => {
+                if (req.body[field] !== undefined) {
+                    profileData[field] = req.body[field];
+                }
+            });
+            if (Object.keys(profileData).length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'No valid profile fields provided for update',
+                    data: null
+                });
+            }
             const updatedUser = await authService.updateUserProfile(id, profileData);
             if (!updatedUser) {
                 return res.status(404).json({

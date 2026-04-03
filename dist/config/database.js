@@ -8,7 +8,7 @@ const mongoose_1 = __importDefault(require("mongoose"));
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const connectDB = async () => {
     try {
-        const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/soloist';
+        const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/soloistUser';
         await mongoose_1.default.connect(mongoUri);
         console.log('MongoDB connected successfully');
         return mongoose_1.default.connection;
