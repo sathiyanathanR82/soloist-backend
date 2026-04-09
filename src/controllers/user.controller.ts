@@ -12,10 +12,13 @@ export class UserController {
 
       const user = await authService.getUserById(id);
 
-      if (!user) {
-        return res.status(404).json({
+      const requesterId = req.user?.userId || req.user?.id;
+      const sanitizedUser = authService.sanitizeUser(user, requesterId);
+
+      if (!sanitizedUser) {
+        return res.status(403).json({
           success: false,
-          message: 'User not found',
+          message: 'This profile is private',
           data: null
         });
       }
@@ -23,7 +26,7 @@ export class UserController {
       res.json({
         success: true,
         message: 'User profile retrieved successfully',
-        data: user
+        data: sanitizedUser
       });
     } catch (error) {
       res.status(500).json({
@@ -62,7 +65,11 @@ export class UserController {
         'website',
         'registerUser',
         'profilePic',
-        'avatar'
+        'avatar',
+        'profileVisibility',
+        'emailVisibility',
+        'phoneVisibility',
+        'showInNearbySearch'
       ];
 
       if (currentUserId !== id) {
@@ -155,12 +162,14 @@ export class UserController {
       const limit = parseInt(req.query.limit as string) || 10;
       const skip = parseInt(req.query.skip as string) || 0;
 
+      const requesterId = req.user?.userId || req.user?.id;
       const users = await authService.listAllUsers(limit, skip);
+      const sanitizedUsers = users.map(u => authService.sanitizeUser(u, requesterId)).filter(u => u !== null);
 
       res.json({
         success: true,
         message: 'Users retrieved successfully',
-        data: users
+        data: sanitizedUsers
       });
     } catch (error) {
       res.status(500).json({

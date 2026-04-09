@@ -32,6 +32,10 @@ export interface IUser extends Document {
   };
   lastLogin?: Date;
   isOnline?: boolean;
+  profileVisibility?: 'All users' | 'Only my network' | 'Only me';
+  emailVisibility?: 'All users' | 'Only my network' | 'Only me';
+  phoneVisibility?: 'All users' | 'Only my network' | 'Only me';
+  showInNearbySearch?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -145,6 +149,25 @@ const userSchema = new Schema<IUser>(
     isOnline: {
       type: Boolean,
       default: false
+    },
+    profileVisibility: {
+      type: String,
+      enum: ['All users', 'Only my network', 'Only me'],
+      default: 'All users'
+    },
+    emailVisibility: {
+      type: String,
+      enum: ['All users', 'Only my network', 'Only me'],
+      default: 'All users'
+    },
+    phoneVisibility: {
+      type: String,
+      enum: ['All users', 'Only my network', 'Only me'],
+      default: 'All users'
+    },
+    showInNearbySearch: {
+      type: Boolean,
+      default: true
     }
   },
   {

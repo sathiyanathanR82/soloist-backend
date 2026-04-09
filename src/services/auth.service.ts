@@ -15,6 +15,68 @@ export class AuthService {
     return query;
   }
 
+  public sanitizeUser(user: any, requesterId?: string): any {
+    if (!user) return null;
+
+    const userData = user.toObject ? user.toObject() : { ...user };
+    const requesterUid = requesterId;
+    const targetUid = userData.uid || userData._id?.toString();
+
+    const isMe = requesterUid && targetUid && requesterUid === targetUid;
+    const isNetwork = requesterUid && userData.network?.myNetwork?.includes(requesterUid);
+
+    // Profile Visibility Enforcement
+    if (!isMe) {
+      if (userData.profileVisibility === 'Only me') {
+        // If profile visibility is 'Only me', hide almost everything except name and photo
+        // Actually, maybe we should return null or a very minimal object?
+        return {
+          uid: userData.uid,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          profilePic: userData.profilePic,
+          profileVisibility: userData.profileVisibility,
+          registerUser: userData.registerUser
+        };
+      }
+
+      if (userData.profileVisibility === 'Only my network' && !isNetwork) {
+        // Restricted profile for non-network users
+        return {
+          uid: userData.uid,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          profilePic: userData.profilePic,
+          headline: userData.headline,
+          profileVisibility: userData.profileVisibility,
+          registerUser: userData.registerUser
+        };
+      }
+    }
+
+    // Field-level visibility (Email)
+    if (!isMe && userData.emailVisibility) {
+      if (userData.emailVisibility === 'Only me' || 
+         (userData.emailVisibility === 'Only my network' && !isNetwork)) {
+        delete userData.email;
+      }
+    }
+
+    // Field-level visibility (Phone)
+    if (!isMe && userData.phoneVisibility) {
+      if (userData.phoneVisibility === 'Only me' || 
+         (userData.phoneVisibility === 'Only my network' && !isNetwork)) {
+        delete userData.phone;
+      }
+    }
+
+    // Always remove sensitive internal fields
+    delete userData.providers;
+    delete userData.__v;
+
+    return userData;
+  }
+
   private async generateBase64Image(imageUrl: string): Promise<string | null> {
     if (!imageUrl) return null;
 
@@ -156,7 +218,7 @@ export class AuthService {
 
   async listAllUsers(limit: number = 10, skip: number = 0): Promise<IUser[]> {
     try {
-      return await User.find()
+      return await User.find({ showInNearbySearch: { $ne: false } })
         .limit(limit)
         .skip(skip)
         .exec();
@@ -227,17 +289,17 @@ export class AuthService {
       user.isOnline = true;
       await user.save();
 
-      const myNetwork = await User.find({ uid: { $in: user.network.myNetwork } })
-        .select('uid firstName lastName email profilePic headline');
-      const requests = await User.find({ uid: { $in: user.network.request } })
-        .select('uid firstName lastName email profilePic headline');
-      const removalRequests = await User.find({ uid: { $in: user.network.removalRequest } })
-        .select('uid firstName lastName email profilePic headline');
+      const myNetworkRaw = await User.find({ uid: { $in: user.network.myNetwork } })
+        .select('uid firstName lastName email phone profilePic headline profileVisibility emailVisibility phoneVisibility showInNearbySearch');
+      const requestsRaw = await User.find({ uid: { $in: user.network.request } })
+        .select('uid firstName lastName email phone profilePic headline profileVisibility emailVisibility phoneVisibility showInNearbySearch');
+      const removalRequestsRaw = await User.find({ uid: { $in: user.network.removalRequest } })
+        .select('uid firstName lastName email phone profilePic headline profileVisibility emailVisibility phoneVisibility showInNearbySearch');
 
       return {
-        myNetwork,
-        requests,
-        removalRequests,
+        myNetwork: myNetworkRaw.map(u => this.sanitizeUser(u, userId)),
+        requests: requestsRaw.map(u => this.sanitizeUser(u, userId)),
+        removalRequests: removalRequestsRaw.map(u => this.sanitizeUser(u, userId)),
         block: user.network.block
       };
     } catch (error) {
