@@ -11,4 +11,11 @@ export declare class AuthService {
     updateUserProfile(userId: string, profileData: any): Promise<IUser | null>;
     deleteUser(userId: string): Promise<void>;
     listAllUsers(limit?: number, skip?: number): Promise<IUser[]>;
+    sendNetworkRequest(fromUserId: string, toUserId: string): Promise<void>;
+    approveNetworkRequest(userId: string, requesterId: string): Promise<void>;
+    rejectNetworkRequest(userId: string, requesterId: string): Promise<void>;
+    getNetworkInfo(userId: string): Promise<{
+        myNetwork: IUser[];
+        requests: IUser[];
+    }>;
 }

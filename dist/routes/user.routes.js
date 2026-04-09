@@ -14,4 +14,9 @@ router.patch('/:id', auth_1.authMiddleware, userController.updateUserProfile.bin
 router.delete('/:id', auth_1.authMiddleware, userController.deleteUserAccount.bind(userController));
 // Get all users (admin)
 router.get('/', auth_1.authMiddleware, userController.getAllUsers.bind(userController));
+// Network routes
+router.post('/network/request/:targetId', auth_1.authMiddleware, userController.sendRequest.bind(userController));
+router.post('/network/approve/:requesterId', auth_1.authMiddleware, userController.approveRequest.bind(userController));
+router.post('/network/reject/:requesterId', auth_1.authMiddleware, userController.rejectRequest.bind(userController));
+router.get('/network/info', auth_1.authMiddleware, userController.getNetworkInfo.bind(userController));
 exports.default = router;

@@ -140,5 +140,67 @@ class AuthService {
             throw new Error(`Failed to list users: ${error}`);
         }
     }
+    async sendNetworkRequest(fromUserId, toUserId) {
+        try {
+            const recipient = await User_1.User.findOne({ uid: toUserId });
+            if (!recipient)
+                throw new Error('Recipient not found');
+            if (!recipient.network.request.includes(fromUserId) &&
+                !recipient.network.myNetwork.includes(fromUserId)) {
+                recipient.network.request.push(fromUserId);
+                await recipient.save();
+            }
+        }
+        catch (error) {
+            throw new Error(`Failed to send network request: ${error}`);
+        }
+    }
+    async approveNetworkRequest(userId, requesterId) {
+        try {
+            const user = await User_1.User.findOne({ uid: userId });
+            const requester = await User_1.User.findOne({ uid: requesterId });
+            if (!user || !requester)
+                throw new Error('User or requester not found');
+            // Remove from request list
+            user.network.request = user.network.request.filter(id => id !== requesterId);
+            // Add to myNetwork for both
+            if (!user.network.myNetwork.includes(requesterId)) {
+                user.network.myNetwork.push(requesterId);
+            }
+            if (!requester.network.myNetwork.includes(userId)) {
+                requester.network.myNetwork.push(userId);
+            }
+            await user.save();
+            await requester.save();
+        }
+        catch (error) {
+            throw new Error(`Failed to approve network request: ${error}`);
+        }
+    }
+    async rejectNetworkRequest(userId, requesterId) {
+        try {
+            const user = await User_1.User.findOne({ uid: userId });
+            if (!user)
+                throw new Error('User not found');
+            user.network.request = user.network.request.filter(id => id !== requesterId);
+            await user.save();
+        }
+        catch (error) {
+            throw new Error(`Failed to reject network request: ${error}`);
+        }
+    }
+    async getNetworkInfo(userId) {
+        try {
+            const user = await User_1.User.findOne({ uid: userId });
+            if (!user)
+                throw new Error('User not found');
+            const myNetwork = await User_1.User.find({ uid: { $in: user.network.myNetwork } });
+            const requests = await User_1.User.find({ uid: { $in: user.network.request } });
+            return { myNetwork, requests };
+        }
+        catch (error) {
+            throw new Error(`Failed to get network info: ${error}`);
+        }
+    }
 }
 exports.AuthService = AuthService;

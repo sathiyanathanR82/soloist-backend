@@ -1,6 +1,6 @@
 import passport from 'passport';
 import { Strategy as FacebookStrategy } from 'passport-facebook';
-import { Strategy as LinkedInStrategy } from 'passport-linkedin-oauth2';
+
 import { Strategy as MicrosoftStrategy } from 'passport-microsoft';
 import { Strategy as YahooStrategy } from 'passport-oauth2';
 import axios from 'axios';
@@ -35,29 +35,7 @@ passport.use(new FacebookStrategy({
   }
 }));
 
-// LinkedIn Strategy
-passport.use(new LinkedInStrategy({
-  clientID: process.env.LINKEDIN_CLIENT_ID || '',
-  clientSecret: process.env.LINKEDIN_CLIENT_SECRET || '',
-  callbackURL: process.env.LINKEDIN_CALLBACK_URL || 'http://localhost:3000/api/auth/linkedin/callback',
-  scope: ['r_emailaddress', 'r_liteprofile']
-}, async (accessToken, refreshToken, profile, done) => {
-  try {
-    const { user, token, isNewUser } = await service.findOrCreateUser(
-      {
-        ...profile,
-        accessToken,
-        refreshToken,
-        emails: profile.emails
-      },
-      'linkedin'
-    );
 
-    return done(null, { user, token, isNewUser });
-  } catch (error) {
-    return done(error);
-  }
-}));
 
 // Google Strategy
 passport.use(new GoogleStrategy({

@@ -4,7 +4,7 @@ Backend API for the Soloist social authentication and user profile management ap
 
 ## Features
 
-- OAuth 2.0 Social Authentication (Facebook, LinkedIn, Google, Microsoft)
+- OAuth 2.0 Social Authentication (Facebook, Google, Microsoft)
 - User Profile Management
 - JWT Token-based Authentication
 - User Data Persistence
@@ -62,8 +62,7 @@ npm start
 
 - `GET /api/auth/facebook` - Facebook OAuth login
 - `GET /api/auth/facebook/callback` - Facebook OAuth callback
-- `GET /api/auth/linkedin` - LinkedIn OAuth login
-- `GET /api/auth/linkedin/callback` - LinkedIn OAuth callback
+
 - `GET /api/auth/google` - Google OAuth login
 - `GET /api/auth/google/callback` - Google OAuth callback
 - `GET /api/auth/microsoft` - Microsoft OAuth login
@@ -106,10 +105,7 @@ src/
 2. Create an app and get App ID and App Secret
 3. Add OAuth redirect URL to app settings
 
-### LinkedIn OAuth
-1. Go to https://www.linkedin.com/developers/
-2. Create an app and get Client ID and Secret
-3. Add OAuth redirect URL to authorized redirect URLs
+
 
 ### Google OAuth
 1. Go to https://console.cloud.google.com/

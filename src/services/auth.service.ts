@@ -81,6 +81,8 @@ export class AuthService {
         }
       }
 
+      user.lastLogin = new Date();
+      user.isOnline = true;
       await user.save();
 
       const token = generateToken(user.uid);
@@ -133,6 +135,17 @@ export class AuthService {
     }
   }
 
+  async updateUserStatus(userId: string, isOnline: boolean): Promise<void> {
+    try {
+      await User.findOneAndUpdate(
+        this.buildUserQuery(userId),
+        { $set: { isOnline, lastLogin: new Date() } }
+      );
+    } catch (error) {
+      throw new Error(`Failed to update user status: ${error}`);
+    }
+  }
+
   async deleteUser(userId: string): Promise<void> {
     try {
       await User.findOneAndDelete(this.buildUserQuery(userId));
@@ -149,6 +162,195 @@ export class AuthService {
         .exec();
     } catch (error) {
       throw new Error(`Failed to list users: ${error}`);
+    }
+  }
+
+  async sendNetworkRequest(fromUserId: string, toUserId: string): Promise<void> {
+    try {
+      const recipient = await User.findOne({ uid: toUserId });
+      if (!recipient) throw new Error('Recipient not found');
+
+      if (!recipient.network.request.includes(fromUserId) && 
+          !recipient.network.myNetwork.includes(fromUserId)) {
+        recipient.network.request.push(fromUserId);
+        await recipient.save();
+      }
+    } catch (error) {
+      throw new Error(`Failed to send network request: ${error}`);
+    }
+  }
+
+  async approveNetworkRequest(userId: string, requesterId: string): Promise<void> {
+    try {
+      const user = await User.findOne({ uid: userId });
+      const requester = await User.findOne({ uid: requesterId });
+
+      if (!user || !requester) throw new Error('User or requester not found');
+
+      // Remove from request list
+      user.network.request = user.network.request.filter(id => id !== requesterId);
+
+      // Add to myNetwork for both
+      if (!user.network.myNetwork.includes(requesterId)) {
+        user.network.myNetwork.push(requesterId);
+      }
+      if (!requester.network.myNetwork.includes(userId)) {
+        requester.network.myNetwork.push(userId);
+      }
+
+      await user.save();
+      await requester.save();
+    } catch (error) {
+      throw new Error(`Failed to approve network request: ${error}`);
+    }
+  }
+
+  async rejectNetworkRequest(userId: string, requesterId: string): Promise<void> {
+    try {
+      const user = await User.findOne({ uid: userId });
+      if (!user) throw new Error('User not found');
+
+      user.network.request = user.network.request.filter(id => id !== requesterId);
+      await user.save();
+    } catch (error) {
+      throw new Error(`Failed to reject network request: ${error}`);
+    }
+  }
+
+  async getNetworkInfo(userId: string): Promise<any> {
+    try {
+      const user = await User.findOne({ uid: userId });
+      if (!user) throw new Error('User not found');
+
+      // Heartbeat: update last active status
+      user.lastLogin = new Date();
+      user.isOnline = true;
+      await user.save();
+
+      const myNetwork = await User.find({ uid: { $in: user.network.myNetwork } })
+        .select('uid firstName lastName email profilePic headline');
+      const requests = await User.find({ uid: { $in: user.network.request } })
+        .select('uid firstName lastName email profilePic headline');
+      const removalRequests = await User.find({ uid: { $in: user.network.removalRequest } })
+        .select('uid firstName lastName email profilePic headline');
+
+      return {
+        myNetwork,
+        requests,
+        removalRequests,
+        block: user.network.block
+      };
+    } catch (error) {
+      throw new Error(`Failed to get network info: ${error}`);
+    }
+  }
+
+  async removeNetworkConnection(userId: string, targetId: string): Promise<void> {
+    // This is now a request-based action
+    return this.requestNetworkRemoval(userId, targetId);
+  }
+
+  async requestNetworkRemoval(userId: string, targetId: string): Promise<void> {
+    try {
+      const target = await User.findOne({ uid: targetId });
+      if (!target) throw new Error('Target user not found');
+
+      // Add requester to target's removalRequest list if not already there
+      if (!target.network.removalRequest.includes(userId)) {
+        target.network.removalRequest.push(userId);
+        await target.save();
+      }
+    } catch (error) {
+      throw new Error(`Failed to request network removal: ${error}`);
+    }
+  }
+
+  async approveNetworkRemoval(userId: string, requesterId: string): Promise<void> {
+    try {
+      const user = await User.findOne({ uid: userId });
+      const requester = await User.findOne({ uid: requesterId });
+
+      if (!user || !requester) throw new Error('User or requester not found');
+
+      // Remove from removalRequest list
+      user.network.removalRequest = user.network.removalRequest.filter(id => id !== requesterId);
+
+      // Remove from myNetwork for both (Final disconnection)
+      user.network.myNetwork = user.network.myNetwork.filter(id => id !== requesterId);
+      requester.network.myNetwork = requester.network.myNetwork.filter(id => id !== userId);
+
+      await user.save();
+      await requester.save();
+    } catch (error) {
+      throw new Error(`Failed to approve network removal: ${error}`);
+    }
+  }
+
+  async rejectNetworkRemoval(userId: string, requesterId: string): Promise<void> {
+    try {
+      const user = await User.findOne({ uid: userId });
+      if (!user) throw new Error('User not found');
+
+      // Just clear the request
+      user.network.removalRequest = user.network.removalRequest.filter(id => id !== requesterId);
+      await user.save();
+    } catch (error) {
+      throw new Error(`Failed to reject network removal: ${error}`);
+    }
+  }
+
+  async cancelNetworkRequest(userId: string, targetId: string): Promise<void> {
+    try {
+      const target = await User.findOne({ uid: targetId });
+      if (!target) throw new Error('Target user not found');
+
+      // Remove the current user from the target user's incoming request list
+      target.network.request = target.network.request.filter(id => id !== userId);
+      await target.save();
+    } catch (error) {
+      throw new Error(`Failed to cancel network request: ${error}`);
+    }
+  }
+
+  async blockUser(userId: string, targetId: string): Promise<void> {
+    try {
+      const user = await User.findOne({ uid: userId });
+      const target = await User.findOne({ uid: targetId });
+
+      if (!user) throw new Error('User not found');
+
+      // 1. Add to block list if not already there
+      if (!user.network.block.includes(targetId)) {
+        user.network.block.push(targetId);
+      }
+
+      // 2. Remove from myNetwork
+      user.network.myNetwork = user.network.myNetwork.filter(id => id !== targetId);
+
+      // 3. Remove from request list (both directions)
+      user.network.request = user.network.request.filter(id => id !== targetId);
+      
+      if (target) {
+        target.network.request = target.network.request.filter(id => id !== userId);
+        target.network.myNetwork = target.network.myNetwork.filter(id => id !== userId);
+        await target.save();
+      }
+
+      await user.save();
+    } catch (error) {
+      throw new Error(`Failed to block user: ${error}`);
+    }
+  }
+
+  async unblockUser(userId: string, targetId: string): Promise<void> {
+    try {
+      const user = await User.findOne({ uid: userId });
+      if (!user) throw new Error('User not found');
+
+      user.network.block = user.network.block.filter(id => id !== targetId);
+      await user.save();
+    } catch (error) {
+      throw new Error(`Failed to unblock user: ${error}`);
     }
   }
 }

@@ -82,6 +82,11 @@ export class AuthController {
 
   async logout(req: AuthRequest, res: Response) {
     try {
+      const userId = req.user?.userId || req.user?.id;
+      if (userId) {
+        await authService.updateUserStatus(userId, false);
+      }
+      
       res.json({
         success: true,
         message: 'Logged out successfully',

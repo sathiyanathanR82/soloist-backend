@@ -22,6 +22,11 @@ export interface IUser extends Document {
         accessToken?: string;
         refreshToken?: string;
     }[];
+    network: {
+        myNetwork: string[];
+        request: string[];
+        block: string[];
+    };
     createdAt: Date;
     updatedAt: Date;
 }

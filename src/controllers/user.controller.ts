@@ -170,4 +170,213 @@ export class UserController {
       });
     }
   }
+
+  async sendRequest(req: AuthRequest, res: Response) {
+    try {
+      const { targetId } = req.params;
+      const fromUserId = req.user?.id || req.user?.userId;
+
+      if (!fromUserId) throw new Error('Unauthorized');
+
+      await authService.sendNetworkRequest(fromUserId, targetId);
+
+      res.json({
+        success: true,
+        message: 'Network request sent successfully'
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to send network request'
+      });
+    }
+  }
+
+  async approveRequest(req: AuthRequest, res: Response) {
+    try {
+      const { requesterId } = req.params;
+      const userId = req.user?.id || req.user?.userId;
+
+      if (!userId) throw new Error('Unauthorized');
+
+      await authService.approveNetworkRequest(userId, requesterId);
+
+      res.json({
+        success: true,
+        message: 'Network request approved'
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to approve network request'
+      });
+    }
+  }
+
+  async rejectRequest(req: AuthRequest, res: Response) {
+    try {
+      const { requesterId } = req.params;
+      const userId = req.user?.id || req.user?.userId;
+
+      if (!userId) throw new Error('Unauthorized');
+
+      await authService.rejectNetworkRequest(userId, requesterId);
+
+      res.json({
+        success: true,
+        message: 'Network request rejected'
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to reject network request'
+      });
+    }
+  }
+
+  async getNetworkInfo(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.user?.id || req.user?.userId;
+
+      if (!userId) throw new Error('Unauthorized');
+
+      const info = await authService.getNetworkInfo(userId);
+
+      res.json({
+        success: true,
+        data: info
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to get network info'
+      });
+    }
+  }
+
+  async removeConnection(req: AuthRequest, res: Response) {
+    try {
+      const { targetId } = req.params;
+      const userId = req.user?.id || req.user?.userId;
+
+      if (!userId) throw new Error('Unauthorized');
+
+      await authService.removeNetworkConnection(userId, targetId);
+
+      res.json({
+        success: true,
+        message: 'Network connection removal requested'
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to remove network connection'
+      });
+    }
+  }
+
+  async approveRemoval(req: AuthRequest, res: Response) {
+    try {
+      const { requesterId } = req.params;
+      const userId = req.user?.id || req.user?.userId;
+
+      if (!userId) throw new Error('Unauthorized');
+
+      await authService.approveNetworkRemoval(userId, requesterId);
+
+      res.json({
+        success: true,
+        message: 'Network connection removed'
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to approve network removal'
+      });
+    }
+  }
+
+  async rejectRemoval(req: AuthRequest, res: Response) {
+    try {
+      const { requesterId } = req.params;
+      const userId = req.user?.id || req.user?.userId;
+
+      if (!userId) throw new Error('Unauthorized');
+
+      await authService.rejectNetworkRemoval(userId, requesterId);
+
+      res.json({
+        success: true,
+        message: 'Network removal request rejected'
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to reject network removal'
+      });
+    }
+  }
+
+  async cancelRequest(req: AuthRequest, res: Response) {
+    try {
+      const { targetId } = req.params;
+      const userId = req.user?.id || req.user?.userId;
+
+      if (!userId) throw new Error('Unauthorized');
+
+      await authService.cancelNetworkRequest(userId, targetId);
+
+      res.json({
+        success: true,
+        message: 'Network request cancelled'
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to cancel network request'
+      });
+    }
+  }
+
+  async blockUser(req: AuthRequest, res: Response) {
+    try {
+      const { targetId } = req.params;
+      const userId = req.user?.id || req.user?.userId;
+
+      if (!userId) throw new Error('Unauthorized');
+
+      await authService.blockUser(userId, targetId);
+
+      res.json({
+        success: true,
+        message: 'User blocked successfully'
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to block user'
+      });
+    }
+  }
+
+  async unblockUser(req: AuthRequest, res: Response) {
+    try {
+      const { targetId } = req.params;
+      const userId = req.user?.id || req.user?.userId;
+
+      if (!userId) throw new Error('Unauthorized');
+
+      await authService.unblockUser(userId, targetId);
+
+      res.json({
+        success: true,
+        message: 'User unblocked successfully'
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to unblock user'
+      });
+    }
+  }
 }

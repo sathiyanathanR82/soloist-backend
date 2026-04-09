@@ -5,7 +5,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const passport_1 = __importDefault(require("passport"));
 const passport_facebook_1 = require("passport-facebook");
-const passport_linkedin_oauth2_1 = require("passport-linkedin-oauth2");
 const passport_microsoft_1 = require("passport-microsoft");
 const passport_oauth2_1 = require("passport-oauth2");
 const axios_1 = __importDefault(require("axios"));
@@ -26,26 +25,6 @@ passport_1.default.use(new passport_facebook_1.Strategy({
             refreshToken,
             emails: profile.emails
         }, 'facebook');
-        return done(null, { user, token, isNewUser });
-    }
-    catch (error) {
-        return done(error);
-    }
-}));
-// LinkedIn Strategy
-passport_1.default.use(new passport_linkedin_oauth2_1.Strategy({
-    clientID: process.env.LINKEDIN_CLIENT_ID || '',
-    clientSecret: process.env.LINKEDIN_CLIENT_SECRET || '',
-    callbackURL: process.env.LINKEDIN_CALLBACK_URL || 'http://localhost:3000/api/auth/linkedin/callback',
-    scope: ['r_emailaddress', 'r_liteprofile']
-}, async (accessToken, refreshToken, profile, done) => {
-    try {
-        const { user, token, isNewUser } = await service.findOrCreateUser({
-            ...profile,
-            accessToken,
-            refreshToken,
-            emails: profile.emails
-        }, 'linkedin');
         return done(null, { user, token, isNewUser });
     }
     catch (error) {

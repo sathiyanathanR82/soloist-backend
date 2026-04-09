@@ -18,17 +18,7 @@ router.get('/facebook/callback',
   }
 );
 
-// LinkedIn OAuth
-router.get('/linkedin', passport.authenticate('linkedin', { scope: ['r_emailaddress', 'r_liteprofile'] }));
 
-router.get('/linkedin/callback',
-  passport.authenticate('linkedin', { failureRedirect: '/' }),
-  (req: any, res) => {
-    const { token, isNewUser } = req.user;
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
-    res.redirect(`${frontendUrl}/profile?token=${token}&isNewUser=${isNewUser}`);
-  }
-);
 
 // Google OAuth
 router.get('/google', passport.authenticate('google', { scope: ['email', 'profile'] }));

@@ -24,6 +24,14 @@ export interface IUser extends Document {
     accessToken?: string;
     refreshToken?: string;
   }[];
+  network: {
+    myNetwork: string[];
+    request: string[];
+    block: string[];
+    removalRequest: string[];
+  };
+  lastLogin?: Date;
+  isOnline?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -111,7 +119,33 @@ const userSchema = new Schema<IUser>(
         accessToken: String,
         refreshToken: String
       }
-    ]
+    ],
+    network: {
+      myNetwork: {
+        type: [String],
+        default: []
+      },
+      request: {
+        type: [String],
+        default: []
+      },
+      block: {
+        type: [String],
+        default: []
+      },
+      removalRequest: {
+        type: [String],
+        default: []
+      }
+    },
+    lastLogin: {
+      type: Date,
+      default: Date.now
+    },
+    isOnline: {
+      type: Boolean,
+      default: false
+    }
   },
   {
     timestamps: true

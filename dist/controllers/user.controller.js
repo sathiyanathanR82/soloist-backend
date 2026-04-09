@@ -39,6 +39,7 @@ class UserController {
                 tokenUser: req.user,
                 match: currentUserId === id
             });
+            console.log('updateUserProfile Request Body:', req.body);
             const allowedFields = [
                 'firstName',
                 'lastName',
@@ -46,6 +47,8 @@ class UserController {
                 'gender',
                 'phone',
                 'location',
+                'latitude',
+                'longitude',
                 'headline',
                 'bio',
                 'website',
@@ -68,9 +71,15 @@ class UserController {
                 }
             });
             if (Object.keys(profileData).length === 0) {
+                console.warn('updateUserProfile: No valid fields found in request body.', {
+                    receivedFields: Object.keys(req.body),
+                    allowedFields,
+                    userId: id,
+                    currentUserId
+                });
                 return res.status(400).json({
                     success: false,
-                    message: 'No valid profile fields provided for update',
+                    message: 'No valid profile fields provided for update. Check the allowed fields list.',
                     data: null
                 });
             }
@@ -140,6 +149,81 @@ class UserController {
                 success: false,
                 message: 'Failed to get users',
                 data: null
+            });
+        }
+    }
+    async sendRequest(req, res) {
+        try {
+            const { targetId } = req.params;
+            const fromUserId = req.user?.id || req.user?.userId;
+            if (!fromUserId)
+                throw new Error('Unauthorized');
+            await authService.sendNetworkRequest(fromUserId, targetId);
+            res.json({
+                success: true,
+                message: 'Network request sent successfully'
+            });
+        }
+        catch (error) {
+            res.status(500).json({
+                success: false,
+                message: error.message || 'Failed to send network request'
+            });
+        }
+    }
+    async approveRequest(req, res) {
+        try {
+            const { requesterId } = req.params;
+            const userId = req.user?.id || req.user?.userId;
+            if (!userId)
+                throw new Error('Unauthorized');
+            await authService.approveNetworkRequest(userId, requesterId);
+            res.json({
+                success: true,
+                message: 'Network request approved'
+            });
+        }
+        catch (error) {
+            res.status(500).json({
+                success: false,
+                message: error.message || 'Failed to approve network request'
+            });
+        }
+    }
+    async rejectRequest(req, res) {
+        try {
+            const { requesterId } = req.params;
+            const userId = req.user?.id || req.user?.userId;
+            if (!userId)
+                throw new Error('Unauthorized');
+            await authService.rejectNetworkRequest(userId, requesterId);
+            res.json({
+                success: true,
+                message: 'Network request rejected'
+            });
+        }
+        catch (error) {
+            res.status(500).json({
+                success: false,
+                message: error.message || 'Failed to reject network request'
+            });
+        }
+    }
+    async getNetworkInfo(req, res) {
+        try {
+            const userId = req.user?.id || req.user?.userId;
+            if (!userId)
+                throw new Error('Unauthorized');
+            const info = await authService.getNetworkInfo(userId);
+            res.json({
+                success: true,
+                data: info
+            });
+        }
+        catch (error) {
+            res.status(500).json({
+                success: false,
+                message: error.message || 'Failed to get network info'
             });
         }
     }
