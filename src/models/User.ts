@@ -10,6 +10,8 @@ export interface IUser extends Document {
   gender?: string;
   phone?: string;
   location?: string;
+  latitude?: number;
+  longitude?: number;
   headline?: string;
   bio?: string;
   website?: string;
@@ -65,6 +67,14 @@ const userSchema = new Schema<IUser>(
     location: {
       type: String,
       default: ''
+    },
+    latitude: {
+      type: Number,
+      default: null
+    },
+    longitude: {
+      type: Number,
+      default: null
     },
     headline: {
       type: String,

@@ -28,7 +28,7 @@ passport.use(new FacebookStrategy({
       },
       'facebook'
     );
-    
+
     return done(null, { user, token, isNewUser });
   } catch (error) {
     return done(error);
@@ -52,7 +52,7 @@ passport.use(new LinkedInStrategy({
       },
       'linkedin'
     );
-    
+
     return done(null, { user, token, isNewUser });
   } catch (error) {
     return done(error);
@@ -75,7 +75,7 @@ passport.use(new GoogleStrategy({
       },
       'google'
     );
-    
+
     return done(null, { user, token, isNewUser });
   } catch (error) {
     return done(error);
@@ -87,7 +87,8 @@ passport.use(new MicrosoftStrategy({
   clientID: process.env.MICROSOFT_CLIENT_ID || '',
   clientSecret: process.env.MICROSOFT_CLIENT_SECRET || '',
   callbackURL: process.env.MICROSOFT_CALLBACK_URL || 'http://localhost:10000/api/auth/microsoft/callback',
-  scope: ['user.read', 'mail.read']
+  scope: ['user.read', 'mail.read'],
+  tenant: process.env.MICROSOFT_TENANT || 'common'
 }, async (accessToken: any, refreshToken: any, profile: { emails: any; }, done: (arg0: unknown, arg1: { user: any; token: any; isNewUser: boolean; } | undefined) => any) => {
   try {
     const { user, token, isNewUser } = await service.findOrCreateUser(
@@ -99,7 +100,7 @@ passport.use(new MicrosoftStrategy({
       },
       'microsoft'
     );
-    
+
     return done(null, { user, token, isNewUser });
   } catch (error) {
     return done(error, undefined);
@@ -133,29 +134,29 @@ const yahooStrategy = new YahooStrategy({
 });
 
 // Yahoo Profile Fetcher (OIDC)
-yahooStrategy.userProfile = function(accessToken: string, done: (err?: any, profile?: any) => void) {
+yahooStrategy.userProfile = function (accessToken: string, done: (err?: any, profile?: any) => void) {
   axios.get('https://api.login.yahoo.com/openid/v1/userinfo', {
     headers: { 'Authorization': `Bearer ${accessToken}` }
   })
-  .then(response => {
-    const data = response.data;
-    const profile = {
-      id: data.sub,
-      displayName: data.name || `${data.given_name} ${data.family_name}`,
-      name: {
-        familyName: data.family_name,
-        givenName: data.given_name
-      },
-      emails: [{ value: data.email, verified: data.email_verified }],
-      photos: [{ value: data.picture }],
-      _raw: JSON.stringify(data),
-      _json: data
-    };
-    done(null, profile);
-  })
-  .catch(err => {
-    done(err);
-  });
+    .then(response => {
+      const data = response.data;
+      const profile = {
+        id: data.sub,
+        displayName: data.name || `${data.given_name} ${data.family_name}`,
+        name: {
+          familyName: data.family_name,
+          givenName: data.given_name
+        },
+        emails: [{ value: data.email, verified: data.email_verified }],
+        photos: [{ value: data.picture }],
+        _raw: JSON.stringify(data),
+        _json: data
+      };
+      done(null, profile);
+    })
+    .catch(err => {
+      done(err);
+    });
 };
 
 passport.use('yahoo', yahooStrategy);

@@ -46,6 +46,8 @@ export class UserController {
         match: currentUserId === id
       });
 
+      console.log('updateUserProfile Request Body:', req.body);
+
       const allowedFields = [
         'firstName',
         'lastName',
@@ -53,6 +55,8 @@ export class UserController {
         'gender',
         'phone',
         'location',
+        'latitude',
+        'longitude',
         'headline',
         'bio',
         'website',
@@ -78,9 +82,15 @@ export class UserController {
       });
 
       if (Object.keys(profileData).length === 0) {
+        console.warn('updateUserProfile: No valid fields found in request body.', {
+          receivedFields: Object.keys(req.body),
+          allowedFields,
+          userId: id,
+          currentUserId
+        });
         return res.status(400).json({
           success: false,
-          message: 'No valid profile fields provided for update',
+          message: 'No valid profile fields provided for update. Check the allowed fields list.',
           data: null
         });
       }

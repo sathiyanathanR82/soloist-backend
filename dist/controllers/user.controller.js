@@ -33,6 +33,12 @@ class UserController {
         try {
             const { id } = req.params;
             const currentUserId = req.user?.userId || req.user?.id;
+            console.log('updateUserProfile:', {
+                urlId: id,
+                tokenUserId: currentUserId,
+                tokenUser: req.user,
+                match: currentUserId === id
+            });
             const allowedFields = [
                 'firstName',
                 'lastName',
@@ -42,9 +48,13 @@ class UserController {
                 'location',
                 'headline',
                 'bio',
-                'website'
+                'website',
+                'registerUser',
+                'profilePic',
+                'avatar'
             ];
             if (currentUserId !== id) {
+                console.error('updateUserProfile: User mismatch', { currentUserId, id });
                 return res.status(403).json({
                     success: false,
                     message: 'Forbidden: Cannot update another user profile',
@@ -66,6 +76,7 @@ class UserController {
             }
             const updatedUser = await authService.updateUserProfile(id, profileData);
             if (!updatedUser) {
+                console.error('updateUserProfile: User not found', { id });
                 return res.status(404).json({
                     success: false,
                     message: 'User not found',
@@ -79,9 +90,11 @@ class UserController {
             });
         }
         catch (error) {
+            console.error('updateUserProfile error:', error);
             res.status(500).json({
                 success: false,
                 message: 'Failed to update user profile',
+                error: process.env.NODE_ENV === 'development' ? error?.message : undefined,
                 data: null
             });
         }

@@ -8,10 +8,13 @@ export interface IUser extends Document {
     gender?: string;
     phone?: string;
     location?: string;
+    latitude?: number;
+    longitude?: number;
     headline?: string;
     bio?: string;
     website?: string;
-    avatar?: string;
+    profilePic?: string;
+    registerUser?: boolean;
     providers: {
         name: string;
         id: string;

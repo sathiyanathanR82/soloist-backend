@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const crypto_1 = __importDefault(require("crypto"));
 const mongoose_1 = __importDefault(require("mongoose"));
+const axios_1 = __importDefault(require("axios"));
 const User_1 = require("../models/User");
 const jwt_1 = require("../utils/jwt");
 class AuthService {
@@ -16,6 +17,23 @@ class AuthService {
         }
         return query;
     }
+    async generateBase64Image(imageUrl) {
+        if (!imageUrl)
+            return null;
+        // If the image is already a Base64 string, return it immediately
+        if (imageUrl.startsWith('data:'))
+            return imageUrl;
+        try {
+            const response = await axios_1.default.get(imageUrl, { responseType: 'arraybuffer' });
+            const buffer = Buffer.from(response.data, 'binary');
+            const contentType = response.headers['content-type'];
+            return `data:${contentType};base64,${buffer.toString('base64')}`;
+        }
+        catch (error) {
+            console.error('Failed to generate base64 image:', error);
+            return null;
+        }
+    }
     async findOrCreateUser(profile, provider) {
         try {
             const email = profile.emails?.[0]?.value || profile.email;
@@ -25,9 +43,10 @@ class AuthService {
                 isNewUser = true;
                 user = new User_1.User({
                     email,
+                    registerUser: false,
                     firstName: profile.name?.givenName || profile.displayName?.split(' ')[0] || '',
                     lastName: profile.name?.familyName || profile.displayName?.split(' ')[1] || '',
-                    avatar: profile.photos?.[0]?.value || '',
+                    profilePic: await this.generateBase64Image(profile.photos?.[0]?.value),
                     providers: [
                         {
                             name: provider,
@@ -42,6 +61,11 @@ class AuthService {
             else {
                 if (!user.uid) {
                     user.uid = crypto_1.default.randomUUID();
+                }
+                // Update profilePic if needed
+                const newAvatar = profile.photos?.[0]?.value || '';
+                if (newAvatar && !user.profilePic) {
+                    user.profilePic = await this.generateBase64Image(newAvatar) || undefined;
                 }
                 const providerExists = user.providers.some(p => p.name === provider);
                 if (!providerExists) {
@@ -78,7 +102,19 @@ class AuthService {
     }
     async updateUserProfile(userId, profileData) {
         try {
-            const user = await User_1.User.findOneAndUpdate(this.buildUserQuery(userId), { $set: profileData }, { new: true, runValidators: true });
+            // Handle legacy 'avatar' or standardized 'profilePic' fields
+            const imageToProcess = profileData.avatar || profileData.profilePic;
+            if (imageToProcess) {
+                profileData.profilePic = await this.generateBase64Image(imageToProcess) || undefined;
+                delete profileData.avatar;
+            }
+            if (profileData.registerUser !== undefined) {
+                profileData.registerUser = Boolean(profileData.registerUser);
+            }
+            const user = await User_1.User.findOneAndUpdate(this.buildUserQuery(userId), {
+                $set: profileData,
+                $unset: { avatar: "" } // Ensure legacy avatar field is removed from DB
+            }, { new: true, runValidators: true });
             return user;
         }
         catch (error) {

@@ -76,7 +76,8 @@ passport_1.default.use(new passport_microsoft_1.Strategy({
     clientID: process.env.MICROSOFT_CLIENT_ID || '',
     clientSecret: process.env.MICROSOFT_CLIENT_SECRET || '',
     callbackURL: process.env.MICROSOFT_CALLBACK_URL || 'http://localhost:10000/api/auth/microsoft/callback',
-    scope: ['user.read', 'mail.read']
+    scope: ['user.read', 'mail.read'],
+    tenant: process.env.MICROSOFT_TENANT || 'common'
 }, async (accessToken, refreshToken, profile, done) => {
     try {
         const { user, token, isNewUser } = await service.findOrCreateUser({
