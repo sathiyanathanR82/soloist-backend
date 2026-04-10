@@ -106,24 +106,24 @@ if (process.env.YAHOO_CLIENT_ID && process.env.YAHOO_CLIENT_SECRET) {
             headers: { 'Authorization': `Bearer ${accessToken}` }
         })
             .then(response => {
-                const data = response.data;
-                const profile = {
-                    id: data.sub,
-                    displayName: data.name || `${data.given_name} ${data.family_name}`,
-                    name: {
-                        familyName: data.family_name,
-                        givenName: data.given_name
-                    },
-                    emails: [{ value: data.email, verified: data.email_verified }],
-                    photos: [{ value: data.picture }],
-                    _raw: JSON.stringify(data),
-                    _json: data
-                };
-                done(null, profile);
-            })
+            const data = response.data;
+            const profile = {
+                id: data.sub,
+                displayName: data.name || `${data.given_name} ${data.family_name}`,
+                name: {
+                    familyName: data.family_name,
+                    givenName: data.given_name
+                },
+                emails: [{ value: data.email, verified: data.email_verified }],
+                photos: [{ value: data.picture }],
+                _raw: JSON.stringify(data),
+                _json: data
+            };
+            done(null, profile);
+        })
             .catch(err => {
-                done(err);
-            });
+            done(err);
+        });
     };
     passport_1.default.use('yahoo', yahooStrategy);
 }

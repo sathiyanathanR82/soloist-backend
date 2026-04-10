@@ -21,6 +21,8 @@ require("./config/passport");
 const auth_1 = require("./middleware/auth");
 const app = (0, express_1.default)();
 const port = process.env.PORT || 3000;
+// Trust reverse proxy for secure cookies (required for Render)
+app.set('trust proxy', 1);
 // Body parser middleware
 app.use(express_1.default.json({ limit: '50mb' }));
 app.use(express_1.default.urlencoded({ limit: '50mb', extended: true }));
