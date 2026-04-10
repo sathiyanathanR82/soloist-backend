@@ -20,7 +20,7 @@ import './config/passport';
 import { corsHeaders } from './middleware/auth';
 
 const app: Express = express();
-const port = process.env.PORT || 10000;
+const port = process.env.PORT || 3000;
 
 // Body parser middleware
 app.use(express.json({ limit: '50mb' }));
@@ -40,7 +40,7 @@ app.use(session({
   secret: process.env.JWT_SECRET || 'secret',
   resave: false,
   saveUninitialized: false,
-  cookie: { 
+  cookie: {
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
@@ -77,7 +77,7 @@ app.use((req, res) => {
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Error:', err);
-  
+
   res.status(err.status || 500).json({
     success: false,
     message: err.message || 'Internal server error',
@@ -89,7 +89,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 const startServer = async () => {
   try {
     await connectDB();
-    
+
     app.listen(port as number, '0.0.0.0', () => {
       console.log(`🚀 Server is running on port ${port}`);
       console.log(`Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:4200'}`);
