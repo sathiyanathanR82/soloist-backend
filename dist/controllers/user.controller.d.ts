@@ -9,4 +9,10 @@ export declare class UserController {
     approveRequest(req: AuthRequest, res: Response): Promise<void>;
     rejectRequest(req: AuthRequest, res: Response): Promise<void>;
     getNetworkInfo(req: AuthRequest, res: Response): Promise<void>;
+    removeConnection(req: AuthRequest, res: Response): Promise<void>;
+    approveRemoval(req: AuthRequest, res: Response): Promise<void>;
+    rejectRemoval(req: AuthRequest, res: Response): Promise<void>;
+    cancelRequest(req: AuthRequest, res: Response): Promise<void>;
+    blockUser(req: AuthRequest, res: Response): Promise<void>;
+    unblockUser(req: AuthRequest, res: Response): Promise<void>;
 }

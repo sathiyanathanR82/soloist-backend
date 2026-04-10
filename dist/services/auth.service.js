@@ -17,6 +17,60 @@ class AuthService {
         }
         return query;
     }
+    sanitizeUser(user, requesterId) {
+        if (!user)
+            return null;
+        const userData = user.toObject ? user.toObject() : { ...user };
+        const requesterUid = requesterId;
+        const targetUid = userData.uid || userData._id?.toString();
+        const isMe = requesterUid && targetUid && requesterUid === targetUid;
+        const isNetwork = requesterUid && userData.network?.myNetwork?.includes(requesterUid);
+        // Profile Visibility Enforcement
+        if (!isMe) {
+            if (userData.profileVisibility === 'Only me') {
+                // If profile visibility is 'Only me', hide almost everything except name and photo
+                // Actually, maybe we should return null or a very minimal object?
+                return {
+                    uid: userData.uid,
+                    firstName: userData.firstName,
+                    lastName: userData.lastName,
+                    profilePic: userData.profilePic,
+                    profileVisibility: userData.profileVisibility,
+                    registerUser: userData.registerUser
+                };
+            }
+            if (userData.profileVisibility === 'Only my network' && !isNetwork) {
+                // Restricted profile for non-network users
+                return {
+                    uid: userData.uid,
+                    firstName: userData.firstName,
+                    lastName: userData.lastName,
+                    profilePic: userData.profilePic,
+                    headline: userData.headline,
+                    profileVisibility: userData.profileVisibility,
+                    registerUser: userData.registerUser
+                };
+            }
+        }
+        // Field-level visibility (Email)
+        if (!isMe && userData.emailVisibility) {
+            if (userData.emailVisibility === 'Only me' ||
+                (userData.emailVisibility === 'Only my network' && !isNetwork)) {
+                delete userData.email;
+            }
+        }
+        // Field-level visibility (Phone)
+        if (!isMe && userData.phoneVisibility) {
+            if (userData.phoneVisibility === 'Only me' ||
+                (userData.phoneVisibility === 'Only my network' && !isNetwork)) {
+                delete userData.phone;
+            }
+        }
+        // Always remove sensitive internal fields
+        delete userData.providers;
+        delete userData.__v;
+        return userData;
+    }
     async generateBase64Image(imageUrl) {
         if (!imageUrl)
             return null;
@@ -78,6 +132,8 @@ class AuthService {
                     });
                 }
             }
+            user.lastLogin = new Date();
+            user.isOnline = true;
             await user.save();
             const token = (0, jwt_1.generateToken)(user.uid);
             return { user, token, isNewUser };
@@ -121,9 +177,17 @@ class AuthService {
             throw new Error(`Failed to update user profile: ${error}`);
         }
     }
+    async updateUserStatus(userId, isOnline) {
+        try {
+            await User_1.User.findOneAndUpdate(this.buildUserQuery(userId), { $set: { isOnline, lastLogin: new Date() } });
+        }
+        catch (error) {
+            throw new Error(`Failed to update user status: ${error}`);
+        }
+    }
     async deleteUser(userId) {
         try {
-            await User_1.User.findOneAndDelete(this.buildUserQuery(userId));
+            await User_1.User.findOneAndUpdate(this.buildUserQuery(userId), { $set: { deletion: true } });
         }
         catch (error) {
             throw new Error(`Failed to delete user: ${error}`);
@@ -131,7 +195,7 @@ class AuthService {
     }
     async listAllUsers(limit = 10, skip = 0) {
         try {
-            return await User_1.User.find()
+            return await User_1.User.find({ showInNearbySearch: { $ne: false }, deletion: { $ne: true } })
                 .limit(limit)
                 .skip(skip)
                 .exec();
@@ -194,12 +258,125 @@ class AuthService {
             const user = await User_1.User.findOne({ uid: userId });
             if (!user)
                 throw new Error('User not found');
-            const myNetwork = await User_1.User.find({ uid: { $in: user.network.myNetwork } });
-            const requests = await User_1.User.find({ uid: { $in: user.network.request } });
-            return { myNetwork, requests };
+            // Heartbeat: update last active status
+            user.lastLogin = new Date();
+            user.isOnline = true;
+            await user.save();
+            const myNetworkRaw = await User_1.User.find({ uid: { $in: user.network.myNetwork } })
+                .select('uid firstName lastName email phone profilePic headline profileVisibility emailVisibility phoneVisibility showInNearbySearch');
+            const requestsRaw = await User_1.User.find({ uid: { $in: user.network.request } })
+                .select('uid firstName lastName email phone profilePic headline profileVisibility emailVisibility phoneVisibility showInNearbySearch');
+            const removalRequestsRaw = await User_1.User.find({ uid: { $in: user.network.removalRequest } })
+                .select('uid firstName lastName email phone profilePic headline profileVisibility emailVisibility phoneVisibility showInNearbySearch');
+            return {
+                myNetwork: myNetworkRaw.map(u => this.sanitizeUser(u, userId)),
+                requests: requestsRaw.map(u => this.sanitizeUser(u, userId)),
+                removalRequests: removalRequestsRaw.map(u => this.sanitizeUser(u, userId)),
+                block: user.network.block
+            };
         }
         catch (error) {
             throw new Error(`Failed to get network info: ${error}`);
+        }
+    }
+    async removeNetworkConnection(userId, targetId) {
+        // This is now a request-based action
+        return this.requestNetworkRemoval(userId, targetId);
+    }
+    async requestNetworkRemoval(userId, targetId) {
+        try {
+            const target = await User_1.User.findOne({ uid: targetId });
+            if (!target)
+                throw new Error('Target user not found');
+            // Add requester to target's removalRequest list if not already there
+            if (!target.network.removalRequest.includes(userId)) {
+                target.network.removalRequest.push(userId);
+                await target.save();
+            }
+        }
+        catch (error) {
+            throw new Error(`Failed to request network removal: ${error}`);
+        }
+    }
+    async approveNetworkRemoval(userId, requesterId) {
+        try {
+            const user = await User_1.User.findOne({ uid: userId });
+            const requester = await User_1.User.findOne({ uid: requesterId });
+            if (!user || !requester)
+                throw new Error('User or requester not found');
+            // Remove from removalRequest list
+            user.network.removalRequest = user.network.removalRequest.filter(id => id !== requesterId);
+            // Remove from myNetwork for both (Final disconnection)
+            user.network.myNetwork = user.network.myNetwork.filter(id => id !== requesterId);
+            requester.network.myNetwork = requester.network.myNetwork.filter(id => id !== userId);
+            await user.save();
+            await requester.save();
+        }
+        catch (error) {
+            throw new Error(`Failed to approve network removal: ${error}`);
+        }
+    }
+    async rejectNetworkRemoval(userId, requesterId) {
+        try {
+            const user = await User_1.User.findOne({ uid: userId });
+            if (!user)
+                throw new Error('User not found');
+            // Just clear the request
+            user.network.removalRequest = user.network.removalRequest.filter(id => id !== requesterId);
+            await user.save();
+        }
+        catch (error) {
+            throw new Error(`Failed to reject network removal: ${error}`);
+        }
+    }
+    async cancelNetworkRequest(userId, targetId) {
+        try {
+            const target = await User_1.User.findOne({ uid: targetId });
+            if (!target)
+                throw new Error('Target user not found');
+            // Remove the current user from the target user's incoming request list
+            target.network.request = target.network.request.filter(id => id !== userId);
+            await target.save();
+        }
+        catch (error) {
+            throw new Error(`Failed to cancel network request: ${error}`);
+        }
+    }
+    async blockUser(userId, targetId) {
+        try {
+            const user = await User_1.User.findOne({ uid: userId });
+            const target = await User_1.User.findOne({ uid: targetId });
+            if (!user)
+                throw new Error('User not found');
+            // 1. Add to block list if not already there
+            if (!user.network.block.includes(targetId)) {
+                user.network.block.push(targetId);
+            }
+            // 2. Remove from myNetwork
+            user.network.myNetwork = user.network.myNetwork.filter(id => id !== targetId);
+            // 3. Remove from request list (both directions)
+            user.network.request = user.network.request.filter(id => id !== targetId);
+            if (target) {
+                target.network.request = target.network.request.filter(id => id !== userId);
+                target.network.myNetwork = target.network.myNetwork.filter(id => id !== userId);
+                await target.save();
+            }
+            await user.save();
+        }
+        catch (error) {
+            throw new Error(`Failed to block user: ${error}`);
+        }
+    }
+    async unblockUser(userId, targetId) {
+        try {
+            const user = await User_1.User.findOne({ uid: userId });
+            if (!user)
+                throw new Error('User not found');
+            user.network.block = user.network.block.filter(id => id !== targetId);
+            await user.save();
+        }
+        catch (error) {
+            throw new Error(`Failed to unblock user: ${error}`);
         }
     }
 }

@@ -8,17 +8,19 @@ class UserController {
         try {
             const { id } = req.params;
             const user = await authService.getUserById(id);
-            if (!user) {
-                return res.status(404).json({
+            const requesterId = req.user?.userId || req.user?.id;
+            const sanitizedUser = authService.sanitizeUser(user, requesterId);
+            if (!sanitizedUser) {
+                return res.status(403).json({
                     success: false,
-                    message: 'User not found',
+                    message: 'This profile is private',
                     data: null
                 });
             }
             res.json({
                 success: true,
                 message: 'User profile retrieved successfully',
-                data: user
+                data: sanitizedUser
             });
         }
         catch (error) {
@@ -54,7 +56,12 @@ class UserController {
                 'website',
                 'registerUser',
                 'profilePic',
-                'avatar'
+                'avatar',
+                'profileVisibility',
+                'emailVisibility',
+                'phoneVisibility',
+                'showInNearbySearch',
+                'deletion'
             ];
             if (currentUserId !== id) {
                 console.error('updateUserProfile: User mismatch', { currentUserId, id });
@@ -137,11 +144,13 @@ class UserController {
         try {
             const limit = parseInt(req.query.limit) || 10;
             const skip = parseInt(req.query.skip) || 0;
+            const requesterId = req.user?.userId || req.user?.id;
             const users = await authService.listAllUsers(limit, skip);
+            const sanitizedUsers = users.map(u => authService.sanitizeUser(u, requesterId)).filter(u => u !== null);
             res.json({
                 success: true,
                 message: 'Users retrieved successfully',
-                data: users
+                data: sanitizedUsers
             });
         }
         catch (error) {
@@ -224,6 +233,120 @@ class UserController {
             res.status(500).json({
                 success: false,
                 message: error.message || 'Failed to get network info'
+            });
+        }
+    }
+    async removeConnection(req, res) {
+        try {
+            const { targetId } = req.params;
+            const userId = req.user?.id || req.user?.userId;
+            if (!userId)
+                throw new Error('Unauthorized');
+            await authService.removeNetworkConnection(userId, targetId);
+            res.json({
+                success: true,
+                message: 'Network connection removal requested'
+            });
+        }
+        catch (error) {
+            res.status(500).json({
+                success: false,
+                message: error.message || 'Failed to remove network connection'
+            });
+        }
+    }
+    async approveRemoval(req, res) {
+        try {
+            const { requesterId } = req.params;
+            const userId = req.user?.id || req.user?.userId;
+            if (!userId)
+                throw new Error('Unauthorized');
+            await authService.approveNetworkRemoval(userId, requesterId);
+            res.json({
+                success: true,
+                message: 'Network connection removed'
+            });
+        }
+        catch (error) {
+            res.status(500).json({
+                success: false,
+                message: error.message || 'Failed to approve network removal'
+            });
+        }
+    }
+    async rejectRemoval(req, res) {
+        try {
+            const { requesterId } = req.params;
+            const userId = req.user?.id || req.user?.userId;
+            if (!userId)
+                throw new Error('Unauthorized');
+            await authService.rejectNetworkRemoval(userId, requesterId);
+            res.json({
+                success: true,
+                message: 'Network removal request rejected'
+            });
+        }
+        catch (error) {
+            res.status(500).json({
+                success: false,
+                message: error.message || 'Failed to reject network removal'
+            });
+        }
+    }
+    async cancelRequest(req, res) {
+        try {
+            const { targetId } = req.params;
+            const userId = req.user?.id || req.user?.userId;
+            if (!userId)
+                throw new Error('Unauthorized');
+            await authService.cancelNetworkRequest(userId, targetId);
+            res.json({
+                success: true,
+                message: 'Network request cancelled'
+            });
+        }
+        catch (error) {
+            res.status(500).json({
+                success: false,
+                message: error.message || 'Failed to cancel network request'
+            });
+        }
+    }
+    async blockUser(req, res) {
+        try {
+            const { targetId } = req.params;
+            const userId = req.user?.id || req.user?.userId;
+            if (!userId)
+                throw new Error('Unauthorized');
+            await authService.blockUser(userId, targetId);
+            res.json({
+                success: true,
+                message: 'User blocked successfully'
+            });
+        }
+        catch (error) {
+            res.status(500).json({
+                success: false,
+                message: error.message || 'Failed to block user'
+            });
+        }
+    }
+    async unblockUser(req, res) {
+        try {
+            const { targetId } = req.params;
+            const userId = req.user?.id || req.user?.userId;
+            if (!userId)
+                throw new Error('Unauthorized');
+            await authService.unblockUser(userId, targetId);
+            res.json({
+                success: true,
+                message: 'User unblocked successfully'
+            });
+        }
+        catch (error) {
+            res.status(500).json({
+                success: false,
+                message: error.message || 'Failed to unblock user'
             });
         }
     }

@@ -134,7 +134,42 @@ const userSchema = new mongoose_1.Schema({
         block: {
             type: [String],
             default: []
+        },
+        removalRequest: {
+            type: [String],
+            default: []
         }
+    },
+    lastLogin: {
+        type: Date,
+        default: Date.now
+    },
+    isOnline: {
+        type: Boolean,
+        default: false
+    },
+    profileVisibility: {
+        type: String,
+        enum: ['All users', 'Only my network', 'Only me'],
+        default: 'All users'
+    },
+    emailVisibility: {
+        type: String,
+        enum: ['All users', 'Only my network', 'Only me'],
+        default: 'All users'
+    },
+    phoneVisibility: {
+        type: String,
+        enum: ['All users', 'Only my network', 'Only me'],
+        default: 'All users'
+    },
+    showInNearbySearch: {
+        type: Boolean,
+        default: true
+    },
+    deletion: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true

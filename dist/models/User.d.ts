@@ -26,7 +26,15 @@ export interface IUser extends Document {
         myNetwork: string[];
         request: string[];
         block: string[];
+        removalRequest: string[];
     };
+    lastLogin?: Date;
+    isOnline?: boolean;
+    profileVisibility?: 'All users' | 'Only my network' | 'Only me';
+    emailVisibility?: 'All users' | 'Only my network' | 'Only me';
+    phoneVisibility?: 'All users' | 'Only my network' | 'Only me';
+    showInNearbySearch?: boolean;
+    deletion?: boolean;
     createdAt: Date;
     updatedAt: Date;
 }
