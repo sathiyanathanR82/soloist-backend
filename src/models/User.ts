@@ -36,6 +36,7 @@ export interface IUser extends Document {
   emailVisibility?: 'All users' | 'Only my network' | 'Only me';
   phoneVisibility?: 'All users' | 'Only my network' | 'Only me';
   showInNearbySearch?: boolean;
+  deletion?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -168,6 +169,10 @@ const userSchema = new Schema<IUser>(
     showInNearbySearch: {
       type: Boolean,
       default: true
+    },
+    deletion: {
+      type: Boolean,
+      default: false
     }
   },
   {

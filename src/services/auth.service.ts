@@ -210,7 +210,7 @@ export class AuthService {
 
   async deleteUser(userId: string): Promise<void> {
     try {
-      await User.findOneAndDelete(this.buildUserQuery(userId));
+      await User.findOneAndUpdate(this.buildUserQuery(userId), { $set: { deletion: true } });
     } catch (error) {
       throw new Error(`Failed to delete user: ${error}`);
     }
@@ -218,7 +218,7 @@ export class AuthService {
 
   async listAllUsers(limit: number = 10, skip: number = 0): Promise<IUser[]> {
     try {
-      return await User.find({ showInNearbySearch: { $ne: false } })
+      return await User.find({ showInNearbySearch: { $ne: false }, deletion: { $ne: true } })
         .limit(limit)
         .skip(skip)
         .exec();

@@ -69,7 +69,8 @@ export class UserController {
         'profileVisibility',
         'emailVisibility',
         'phoneVisibility',
-        'showInNearbySearch'
+        'showInNearbySearch',
+        'deletion'
       ];
 
       if (currentUserId !== id) {
