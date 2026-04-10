@@ -64,6 +64,18 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Microsoft domain verification (served without auth)
+app.get('/.well-known/microsoft-identity-association.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.json({
+    associatedApplications: [
+      {
+        applicationId: 'f37b95dd-1432-46c6-9402-8654dc11d93a'
+      }
+    ]
+  });
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
