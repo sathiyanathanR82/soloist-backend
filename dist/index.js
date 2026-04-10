@@ -78,7 +78,7 @@ app.use((err, req, res, next) => {
 const startServer = async () => {
     try {
         await (0, database_1.connectDB)();
-        app.listen(port, () => {
+        app.listen(port, '0.0.0.0', () => {
             console.log(`🚀 Server is running on port ${port}`);
             console.log(`Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:4200'}`);
         });
