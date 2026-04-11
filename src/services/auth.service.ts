@@ -227,14 +227,14 @@ export class AuthService {
     }
   }
 
-  async sendNetworkRequest(fromUserId: string, toUserId: string): Promise<void> {
+async sendNetworkRequest(fromUserId: string, toUserId: string, inviteMessage = ''): Promise<void> {
     try {
       const recipient = await User.findOne({ uid: toUserId });
       if (!recipient) throw new Error('Recipient not found');
 
-      if (!recipient.network.request.includes(fromUserId) && 
+      if (!recipient.network.request.some((r: any) => r.userId === fromUserId) && 
           !recipient.network.myNetwork.includes(fromUserId)) {
-        recipient.network.request.push(fromUserId);
+        recipient.network.request.push({ userId: fromUserId, inviteMessage });
         await recipient.save();
       }
     } catch (error) {
@@ -242,15 +242,19 @@ export class AuthService {
     }
   }
 
-  async approveNetworkRequest(userId: string, requesterId: string): Promise<void> {
+
+async approveNetworkRequest(userId: string, requesterId: string): Promise<void> {
     try {
       const user = await User.findOne({ uid: userId });
       const requester = await User.findOne({ uid: requesterId });
 
       if (!user || !requester) throw new Error('User or requester not found');
 
-      // Remove from request list
-      user.network.request = user.network.request.filter(id => id !== requesterId);
+      // Find invite message
+      const reqData = user.network.request.find((r: any) => r.userId === requesterId);
+      const inviteMessage = reqData?.inviteMessage || '';
+
+      // Remove from request list\n      user.network.request = user.network.request.filter((r: any) => r.userId !== requesterId);\n\n      // Remove any pending request from target to user\n      if (requester) {\n        requester.network.request = requester.network.request.filter((r: any) => r.userId !== userId);\n      }
 
       // Add to myNetwork for both
       if (!user.network.myNetwork.includes(requesterId)) {
@@ -260,6 +264,33 @@ export class AuthService {
         requester.network.myNetwork.push(userId);
       }
 
+      // Start message thread with invite as first message (if any)
+      if (inviteMessage) {
+        const msg = {
+          from: requesterId,
+          to: userId,
+          text: inviteMessage,
+          timestamp: new Date(),
+          type: 'invite' as const
+        };
+        // Check if conversation exists, else create new
+        let userConvIndex = user.network.messages?.findIndex((c: any) => c.withUserId === requesterId);
+        if (userConvIndex === -1) {
+          userConvIndex = user.network.messages?.length || 0;
+          user.network.messages = user.network.messages || [];
+          user.network.messages.push({ withUserId: requesterId, messages: [] });
+        }
+        user.network.messages![userConvIndex].messages.push(msg);
+
+        let requesterConvIndex = requester.network.messages?.findIndex((c: any) => c.withUserId === userId);
+        if (requesterConvIndex === -1) {
+          requesterConvIndex = requester.network.messages?.length || 0;
+          requester.network.messages = requester.network.messages || [];
+          requester.network.messages.push({ withUserId: userId, messages: [] });
+        }
+        requester.network.messages![requesterConvIndex].messages.push(msg);
+      }
+
       await user.save();
       await requester.save();
     } catch (error) {
@@ -267,17 +298,19 @@ export class AuthService {
     }
   }
 
-  async rejectNetworkRequest(userId: string, requesterId: string): Promise<void> {
+
+async rejectNetworkRequest(userId: string, requesterId: string): Promise<void> {
     try {
       const user = await User.findOne({ uid: userId });
       if (!user) throw new Error('User not found');
 
-      user.network.request = user.network.request.filter(id => id !== requesterId);
+      user.network.request = user.network.request.filter((r: any) => r.userId !== requesterId);
       await user.save();
     } catch (error) {
       throw new Error(`Failed to reject network request: ${error}`);
     }
   }
+
 
   async getNetworkInfo(userId: string): Promise<any> {
     try {
@@ -289,19 +322,27 @@ export class AuthService {
       user.isOnline = true;
       await user.save();
 
+      const requestUids = user.network.request.map((r: any) => r.userId);
       const myNetworkRaw = await User.find({ uid: { $in: user.network.myNetwork } })
         .select('uid firstName lastName email phone profilePic headline profileVisibility emailVisibility phoneVisibility showInNearbySearch');
-      const requestsRaw = await User.find({ uid: { $in: user.network.request } })
+      const requestsRaw = await User.find({ uid: { $in: requestUids } })
         .select('uid firstName lastName email phone profilePic headline profileVisibility emailVisibility phoneVisibility showInNearbySearch');
       const removalRequestsRaw = await User.find({ uid: { $in: user.network.removalRequest } })
         .select('uid firstName lastName email phone profilePic headline profileVisibility emailVisibility phoneVisibility showInNearbySearch');
 
       return {
         myNetwork: myNetworkRaw.map(u => this.sanitizeUser(u, userId)),
-        requests: requestsRaw.map(u => this.sanitizeUser(u, userId)),
+        requests: requestsRaw.map(u => {
+          const reqData = user.network.request.find((r: any) => r.userId === u.uid);
+          return {
+            ...this.sanitizeUser(u, userId),
+            inviteMessage: reqData?.inviteMessage || ''
+          };
+        }),
         removalRequests: removalRequestsRaw.map(u => this.sanitizeUser(u, userId)),
         block: user.network.block
       };
+
     } catch (error) {
       throw new Error(`Failed to get network info: ${error}`);
     }
@@ -361,18 +402,19 @@ export class AuthService {
     }
   }
 
-  async cancelNetworkRequest(userId: string, targetId: string): Promise<void> {
+async cancelNetworkRequest(userId: string, targetId: string): Promise<void> {
     try {
       const target = await User.findOne({ uid: targetId });
       if (!target) throw new Error('Target user not found');
 
       // Remove the current user from the target user's incoming request list
-      target.network.request = target.network.request.filter(id => id !== userId);
+      target.network.request = target.network.request.filter((r: any) => r.userId !== userId);
       await target.save();
     } catch (error) {
       throw new Error(`Failed to cancel network request: ${error}`);
     }
   }
+
 
   async blockUser(userId: string, targetId: string): Promise<void> {
     try {
@@ -390,10 +432,10 @@ export class AuthService {
       user.network.myNetwork = user.network.myNetwork.filter(id => id !== targetId);
 
       // 3. Remove from request list (both directions)
-      user.network.request = user.network.request.filter(id => id !== targetId);
+user.network.request = user.network.request.filter(r => r.userId !== targetId);
       
       if (target) {
-        target.network.request = target.network.request.filter(id => id !== userId);
+target.network.request = target.network.request.filter(r => r.userId !== userId);
         target.network.myNetwork = target.network.myNetwork.filter(id => id !== userId);
         await target.save();
       }

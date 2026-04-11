@@ -26,10 +26,21 @@ export interface IUser extends Document {
   }[];
   network: {
     myNetwork: string[];
-    request: string[];
+    request: {userId: string, inviteMessage?: string}[];
     block: string[];
     removalRequest: string[];
+    messages: {
+      withUserId: string;
+      messages: {
+        from: string;
+        to: string;
+        text: string;
+        timestamp: Date;
+        type?: 'invite' | 'message';
+      }[];
+    }[];
   };
+
   lastLogin?: Date;
   isOnline?: boolean;
   profileVisibility?: 'All users' | 'Only my network' | 'Only me';
@@ -130,10 +141,16 @@ const userSchema = new Schema<IUser>(
         type: [String],
         default: []
       },
-      request: {
-        type: [String],
-        default: []
-      },
+      request: [{
+        userId: {
+          type: String,
+          required: true
+        },
+        inviteMessage: {
+          type: String,
+          default: ''
+        }
+      }],
       block: {
         type: [String],
         default: []
@@ -141,8 +158,29 @@ const userSchema = new Schema<IUser>(
       removalRequest: {
         type: [String],
         default: []
-      }
+      },
+      messages: [{
+        withUserId: {
+          type: String,
+          required: true
+        },
+        messages: [{
+          from: String,
+          to: String,
+          text: String,
+          timestamp: {
+            type: Date,
+            default: Date.now
+          },
+          type: {
+            type: String,
+            enum: ['invite', 'message'],
+            default: 'message'
+          }
+        }]
+      }]
     },
+
     lastLogin: {
       type: Date,
       default: Date.now

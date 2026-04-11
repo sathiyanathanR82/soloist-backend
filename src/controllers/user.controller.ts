@@ -188,7 +188,8 @@ export class UserController {
 
       if (!fromUserId) throw new Error('Unauthorized');
 
-      await authService.sendNetworkRequest(fromUserId, targetId);
+      await authService.sendNetworkRequest(fromUserId, targetId, req.body.inviteMessage || '');
+
 
       res.json({
         success: true,
