@@ -10,13 +10,16 @@ import { Strategy as GoogleStrategy, Profile, VerifyCallback } from 'passport-go
 
 const authService = require('../services/auth.service').AuthService;
 const service = new authService();
+const callbackBase = process.env.BACKEND_URL || 'http://localhost:3000';
 
 // Facebook Strategy
 if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
   passport.use(new FacebookStrategy({
     clientID: process.env.FACEBOOK_APP_ID,
     clientSecret: process.env.FACEBOOK_APP_SECRET,
-callbackURL: 'http://localhost:3000' + '/api/auth/facebook/callback',
+    // callbackURL: (process.env.CALLBACK_URL || 'http://localhost:3000') + '/api/auth/facebook/callback',
+    callbackURL: `${callbackBase}/api/auth/facebook/callback`,
+
     profileFields: ['id', 'displayName', 'email', 'picture', 'first_name', 'last_name']
   }, async (accessToken, refreshToken, profile, done) => {
     try {
@@ -43,7 +46,8 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-callbackURL: 'http://localhost:3000' + '/api/auth/google/callback'
+    // callbackURL: (process.env.CALLBACK_URL || 'http://localhost:3000') + '/api/auth/google/callback'
+    callbackURL: `${callbackBase}/api/auth/google/callback`
   }, async (accessToken, refreshToken, profile, done) => {
     try {
       const { user, token, isNewUser } = await service.findOrCreateUser(
@@ -68,7 +72,8 @@ if (process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET) {
   passport.use(new MicrosoftStrategy({
     clientID: process.env.MICROSOFT_CLIENT_ID,
     clientSecret: process.env.MICROSOFT_CLIENT_SECRET,
-callbackURL: 'http://localhost:3000' + '/api/auth/microsoft/callback',
+    // callbackURL: (process.env.CALLBACK_URL || 'http://localhost:3000') + '/api/auth/microsoft/callback',
+    callbackURL: `${callbackBase}/api/auth/microsoft/callback`,
     scope: ['user.read', 'mail.read'],
     tenant: process.env.MICROSOFT_TENANT || 'common'
   }, async (accessToken: any, refreshToken: any, profile: { emails: any; }, done: (arg0: unknown, arg1: { user: any; token: any; isNewUser: boolean; } | undefined) => any) => {
@@ -97,7 +102,8 @@ if (process.env.YAHOO_CLIENT_ID && process.env.YAHOO_CLIENT_SECRET) {
     tokenURL: 'https://api.login.yahoo.com/oauth2/get_token',
     clientID: process.env.YAHOO_CLIENT_ID,
     clientSecret: process.env.YAHOO_CLIENT_SECRET,
-callbackURL: 'http://localhost:3000' + '/api/auth/yahoo/callback',
+    // callbackURL: (process.env.CALLBACK_URL || 'http://localhost:3000') + '/api/auth/yahoo/callback',
+    callbackURL: `${callbackBase}/api/auth/yahoo/callback`,
     scope: ['openid', 'profile', 'email']
   }, async (accessToken: string, refreshToken: string, profile: any, done: any) => {
     try {
