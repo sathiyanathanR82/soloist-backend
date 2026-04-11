@@ -30,4 +30,9 @@ router.post('/network/block/:targetId', authMiddleware, userController.blockUser
 router.post('/network/unblock/:targetId', authMiddleware, userController.unblockUser.bind(userController));
 router.get('/network/info', authMiddleware, userController.getNetworkInfo.bind(userController));
 
+// Messaging routes
+router.post('/messages/send/:targetId', authMiddleware, userController.sendMessage.bind(userController));
+router.get('/messages/:targetId', authMiddleware, userController.getMessages.bind(userController));
+router.get('/messages/:conversationId', authMiddleware, userController.getMessagesByConversationId.bind(userController));
+
 export default router;

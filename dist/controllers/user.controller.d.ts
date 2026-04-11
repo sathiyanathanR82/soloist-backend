@@ -15,4 +15,7 @@ export declare class UserController {
     cancelRequest(req: AuthRequest, res: Response): Promise<void>;
     blockUser(req: AuthRequest, res: Response): Promise<void>;
     unblockUser(req: AuthRequest, res: Response): Promise<void>;
+    sendMessage(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>> | undefined>;
+    getMessages(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>> | undefined>;
+    getMessagesByConversationId(req: AuthRequest, res: Response): Promise<Response<any, Record<string, any>> | undefined>;
 }

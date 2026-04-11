@@ -229,13 +229,46 @@ export class AuthService {
 
 async sendNetworkRequest(fromUserId: string, toUserId: string, inviteMessage = ''): Promise<void> {
     try {
+      const sender = await User.findOne({ uid: fromUserId });
       const recipient = await User.findOne({ uid: toUserId });
-      if (!recipient) throw new Error('Recipient not found');
+      if (!recipient || !sender) throw new Error('User not found');
 
       if (!recipient.network.request.some((r: any) => r.userId === fromUserId) && 
           !recipient.network.myNetwork.includes(fromUserId)) {
+        // Add to request list
         recipient.network.request.push({ userId: fromUserId, inviteMessage });
+        
+        // Store message in network.messages array if message is provided
+        if (inviteMessage) {
+          const msg = {
+            from: fromUserId,
+            to: toUserId,
+            text: inviteMessage,
+            timestamp: new Date(),
+            type: 'invite' as const
+          };
+          
+          // Add message to recipient's messages
+          let recipientConvIndex = recipient.network.messages?.findIndex((c: any) => c.withUserId === fromUserId);
+          if (recipientConvIndex === -1 || recipientConvIndex === undefined) {
+            recipientConvIndex = recipient.network.messages?.length || 0;
+            recipient.network.messages = recipient.network.messages || [];
+            recipient.network.messages.push({ withUserId: fromUserId, messages: [] });
+          }
+          recipient.network.messages![recipientConvIndex].messages.push(msg);
+          
+          // Add message to sender's messages
+          let senderConvIndex = sender.network.messages?.findIndex((c: any) => c.withUserId === toUserId);
+          if (senderConvIndex === -1 || senderConvIndex === undefined) {
+            senderConvIndex = sender.network.messages?.length || 0;
+            sender.network.messages = sender.network.messages || [];
+            sender.network.messages.push({ withUserId: toUserId, messages: [] });
+          }
+          sender.network.messages![senderConvIndex].messages.push(msg);
+        }
+        
         await recipient.save();
+        await sender.save();
       }
     } catch (error) {
       throw new Error(`Failed to send network request: ${error}`);
@@ -312,6 +345,15 @@ async rejectNetworkRequest(userId: string, requesterId: string): Promise<void> {
   }
 
 
+async getInviteMessages(user: any, targetUid: string): Promise<any[]> {
+    const conv = user.network.messages?.find((c: any) => c.withUserId === targetUid);
+    if (!conv || !conv.messages) return [];
+
+    return conv.messages
+      .filter((msg: any) => msg.type === 'invite')
+      .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }
+
   async getNetworkInfo(userId: string): Promise<any> {
     try {
       const user = await User.findOne({ uid: userId });
@@ -331,12 +373,15 @@ async rejectNetworkRequest(userId: string, requesterId: string): Promise<void> {
         .select('uid firstName lastName email phone profilePic headline profileVisibility emailVisibility phoneVisibility showInNearbySearch');
 
       return {
+        createdAt: user.createdAt,
         myNetwork: myNetworkRaw.map(u => this.sanitizeUser(u, userId)),
         requests: requestsRaw.map(u => {
           const reqData = user.network.request.find((r: any) => r.userId === u.uid);
+          const inviteMessages = this.getInviteMessages(user, u.uid);
           return {
             ...this.sanitizeUser(u, userId),
-            inviteMessage: reqData?.inviteMessage || ''
+            inviteMessage: reqData?.inviteMessage || '',
+            inviteMessages: inviteMessages
           };
         }),
         removalRequests: removalRequestsRaw.map(u => this.sanitizeUser(u, userId)),
@@ -457,4 +502,78 @@ target.network.request = target.network.request.filter(r => r.userId !== userId)
       throw new Error(`Failed to unblock user: ${error}`);
     }
   }
+
+  async sendMessage(senderId: string, targetId: string, text: string): Promise<void> {
+    try {
+      const sender = await User.findOne({ uid: senderId });
+      const target = await User.findOne({ uid: targetId });
+      if (!sender || !target) throw new Error('User not found');
+
+      const msg = {
+        from: senderId,
+        to: targetId,
+        text: text.trim(),
+        timestamp: new Date(),
+        type: 'message' as const
+      };
+
+      // Add to sender's conversation with target
+      let senderConvIndex = sender.network.messages?.findIndex((c: any) => c.withUserId === targetId);
+      if (senderConvIndex === -1) {
+        senderConvIndex = sender.network.messages?.length || 0;
+        sender.network.messages = sender.network.messages || [];
+        sender.network.messages!.push({ withUserId: targetId, messages: [] });
+      }
+      sender.network.messages![senderConvIndex].messages.push(msg);
+
+      // Add to target's conversation with sender
+      let targetConvIndex = target.network.messages?.findIndex((c: any) => c.withUserId === senderId);
+      if (targetConvIndex === -1) {
+        targetConvIndex = target.network.messages?.length || 0;
+        target.network.messages = target.network.messages || [];
+        target.network.messages!.push({ withUserId: senderId, messages: [] });
+      }
+      target.network.messages![targetConvIndex].messages.push(msg);
+
+      await sender.save();
+      await target.save();
+    } catch (error) {
+      throw new Error(`Failed to send message: ${error}`);
+    }
+  }
+
+  async getMessagesWith(userId: string, targetId: string, limit: number = 100): Promise<any[]> {
+    try {
+      const user = await User.findOne({ uid: userId });
+      if (!user) throw new Error('User not found');
+
+      const conv = user.network.messages?.find((c: any) => c.withUserId === targetId);
+      if (!conv || !conv.messages) return [];
+
+      return conv.messages
+        .sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+        .slice(-limit);
+    } catch (error) {
+      throw new Error(`Failed to get messages: ${error}`);
+    }
+  }
+
+  async getMessagesByConversationId(userId: string, conversationId: string, limit: number = 100): Promise<any[]> {
+    try {
+      const user = await User.findOne({ uid: userId });
+      if (!user) throw new Error('User not found');
+
+      const conv = user.network.messages?.find((c: any) => c.withUserId === conversationId);
+      if (!conv || !conv.messages) {
+        throw new Error('Conversation not found');
+      }
+
+      return conv.messages
+        .sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+        .slice(-limit);
+    } catch (error) {
+      throw new Error(`Failed to get messages: ${error}`);
+    }
+  }
 }
+

@@ -188,7 +188,9 @@ export class UserController {
 
       if (!fromUserId) throw new Error('Unauthorized');
 
-      await authService.sendNetworkRequest(fromUserId, targetId, req.body.inviteMessage || '');
+      // Accept both 'message' and 'inviteMessage' parameters for flexibility
+      const message = req.body.message || req.body.inviteMessage || '';
+      await authService.sendNetworkRequest(fromUserId, targetId, message);
 
 
       res.json({
@@ -390,4 +392,93 @@ export class UserController {
       });
     }
   }
+
+  async sendMessage(req: AuthRequest, res: Response) {
+    try {
+      const { targetId } = req.params;
+      const userId = req.user?.id || req.user?.userId;
+      const { text } = req.body;
+
+      if (!userId || !text || !targetId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing userId, targetId, or text'
+        });
+      }
+
+      await authService.sendMessage(userId, targetId, text);
+
+      res.json({
+        success: true,
+        message: 'Message sent successfully'
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to send message'
+      });
+    }
+  }
+
+  async getMessages(req: AuthRequest, res: Response) {
+    try {
+      const { targetId } = req.params;
+      const userId = req.user?.id || req.user?.userId;
+      const limit = parseInt(req.query.limit as string) || 100;
+
+      if (!userId || !targetId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing userId or targetId'
+        });
+      }
+
+      const messages = await authService.getMessagesWith(userId, targetId, limit);
+
+      res.json({
+        success: true,
+        data: messages
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to get messages'
+      });
+    }
+  }
+
+  async getMessagesByConversationId(req: AuthRequest, res: Response) {
+    try {
+      const { conversationId } = req.params;  // Note: renamed from targetId to conversationId
+      const userId = req.user?.id || req.user?.userId;
+      const limit = parseInt(req.query.limit as string) || 100;
+
+      if (!userId || !conversationId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing userId or conversationId'
+        });
+      }
+
+      const messages = await authService.getMessagesByConversationId(userId, conversationId, limit);
+
+      res.json({
+        success: true,
+        data: messages
+      });
+    } catch (error: any) {
+      if (error.message === 'Conversation not found') {
+        return res.status(404).json({
+          success: false,
+          message: 'Conversation not found for this user',
+          data: []
+        });
+      }
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to get messages'
+      });
+    }
+  }
 }
+

@@ -167,7 +167,9 @@ class UserController {
             const fromUserId = req.user?.id || req.user?.userId;
             if (!fromUserId)
                 throw new Error('Unauthorized');
-            await authService.sendNetworkRequest(fromUserId, targetId);
+            // Accept both 'message' and 'inviteMessage' parameters for flexibility
+            const message = req.body.message || req.body.inviteMessage || '';
+            await authService.sendNetworkRequest(fromUserId, targetId, message);
             res.json({
                 success: true,
                 message: 'Network request sent successfully'
@@ -347,6 +349,85 @@ class UserController {
             res.status(500).json({
                 success: false,
                 message: error.message || 'Failed to unblock user'
+            });
+        }
+    }
+    async sendMessage(req, res) {
+        try {
+            const { targetId } = req.params;
+            const userId = req.user?.id || req.user?.userId;
+            const { text } = req.body;
+            if (!userId || !text || !targetId) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Missing userId, targetId, or text'
+                });
+            }
+            await authService.sendMessage(userId, targetId, text);
+            res.json({
+                success: true,
+                message: 'Message sent successfully'
+            });
+        }
+        catch (error) {
+            res.status(500).json({
+                success: false,
+                message: error.message || 'Failed to send message'
+            });
+        }
+    }
+    async getMessages(req, res) {
+        try {
+            const { targetId } = req.params;
+            const userId = req.user?.id || req.user?.userId;
+            const limit = parseInt(req.query.limit) || 100;
+            if (!userId || !targetId) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Missing userId or targetId'
+                });
+            }
+            const messages = await authService.getMessagesWith(userId, targetId, limit);
+            res.json({
+                success: true,
+                data: messages
+            });
+        }
+        catch (error) {
+            res.status(500).json({
+                success: false,
+                message: error.message || 'Failed to get messages'
+            });
+        }
+    }
+    async getMessagesByConversationId(req, res) {
+        try {
+            const { conversationId } = req.params; // Note: renamed from targetId to conversationId
+            const userId = req.user?.id || req.user?.userId;
+            const limit = parseInt(req.query.limit) || 100;
+            if (!userId || !conversationId) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Missing userId or conversationId'
+                });
+            }
+            const messages = await authService.getMessagesByConversationId(userId, conversationId, limit);
+            res.json({
+                success: true,
+                data: messages
+            });
+        }
+        catch (error) {
+            if (error.message === 'Conversation not found') {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Conversation not found for this user',
+                    data: []
+                });
+            }
+            res.status(500).json({
+                success: false,
+                message: error.message || 'Failed to get messages'
             });
         }
     }

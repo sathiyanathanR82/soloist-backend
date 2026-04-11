@@ -13,9 +13,10 @@ export declare class AuthService {
     updateUserStatus(userId: string, isOnline: boolean): Promise<void>;
     deleteUser(userId: string): Promise<void>;
     listAllUsers(limit?: number, skip?: number): Promise<IUser[]>;
-    sendNetworkRequest(fromUserId: string, toUserId: string): Promise<void>;
+    sendNetworkRequest(fromUserId: string, toUserId: string, inviteMessage?: string): Promise<void>;
     approveNetworkRequest(userId: string, requesterId: string): Promise<void>;
     rejectNetworkRequest(userId: string, requesterId: string): Promise<void>;
+    getInviteMessages(user: any, targetUid: string): Promise<any[]>;
     getNetworkInfo(userId: string): Promise<any>;
     removeNetworkConnection(userId: string, targetId: string): Promise<void>;
     requestNetworkRemoval(userId: string, targetId: string): Promise<void>;
@@ -24,4 +25,7 @@ export declare class AuthService {
     cancelNetworkRequest(userId: string, targetId: string): Promise<void>;
     blockUser(userId: string, targetId: string): Promise<void>;
     unblockUser(userId: string, targetId: string): Promise<void>;
+    sendMessage(senderId: string, targetId: string, text: string): Promise<void>;
+    getMessagesWith(userId: string, targetId: string, limit?: number): Promise<any[]>;
+    getMessagesByConversationId(userId: string, conversationId: string, limit?: number): Promise<any[]>;
 }

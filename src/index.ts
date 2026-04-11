@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import passport from 'passport';
 import session from 'express-session';
 import "reflect-metadata";
+import { Server } from 'socket.io';
+import { verifyToken } from './utils/jwt';
 
 // Load environment variables
 dotenv.config();
@@ -105,10 +107,67 @@ const startServer = async () => {
   try {
     await connectDB();
 
-    app.listen(port as number, '0.0.0.0', () => {
+    const httpServer = app.listen(port as number, '0.0.0.0', () => {
       console.log(`🚀 Server is running on port ${port}`);
       console.log(`Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:4200'}`);
     });
+
+    // Socket.io setup
+    const io = new Server(httpServer, {
+      cors: {
+        origin: process.env.FRONTEND_URL || 'http://localhost:4200',
+        methods: ['GET', 'POST'],
+        credentials: true
+      }
+    });
+
+    // Socket auth middleware
+    io.use((socket, next) => {
+      const token = socket.handshake.auth.token || socket.handshake.query.token as string;
+      if (!token) return next(new Error('Authentication error: No token provided'));
+
+      const decoded = verifyToken(token);
+      if (!decoded || !decoded.userId) return next(new Error('Authentication error: Invalid token'));
+      
+      socket.data.userId = decoded.userId;
+      next();
+    });
+
+    io.on('connection', (socket) => {
+      console.log(`User connected: ${socket.data.userId}`);
+
+      // Join network rooms
+      socket.on('join-network', (networkUids: string[]) => {
+        networkUids.forEach(uid => {
+          const room = [socket.data.userId, uid].sort().join('-');
+          socket.join(room);
+        });
+      });
+
+      // Message send (server-side emit)
+      socket.on('send-message', async ({ targetId, text }: { targetId: string, text: string }) => {
+        try {
+          const { AuthService } = await import('./services/auth.service');
+          const authService = new AuthService();
+          await authService.sendMessage(socket.data.userId!, targetId, text);
+
+          const room = [socket.data.userId!, targetId].sort().join('-');
+          io.to(room).emit('new-message', {
+            from: socket.data.userId!,
+            to: targetId,
+            text,
+            timestamp: new Date().toISOString()
+          });
+        } catch (error) {
+          socket.emit('error', { message: (error as Error).message });
+        }
+      });
+
+      socket.on('disconnect', () => {
+        console.log(`User disconnected: ${socket.data.userId}`);
+      });
+    });
+
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
