@@ -24,9 +24,22 @@ export interface IUser extends Document {
     }[];
     network: {
         myNetwork: string[];
-        request: string[];
+        request: {
+            userId: string;
+            inviteMessage?: string;
+        }[];
         block: string[];
         removalRequest: string[];
+        messages: {
+            withUserId: string;
+            messages: {
+                from: string;
+                to: string;
+                text: string;
+                timestamp: Date;
+                type?: 'invite' | 'message';
+            }[];
+        }[];
     };
     lastLogin?: Date;
     isOnline?: boolean;

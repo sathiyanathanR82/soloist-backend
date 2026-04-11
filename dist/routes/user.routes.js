@@ -25,4 +25,8 @@ router.post('/network/cancel/:targetId', auth_1.authMiddleware, userController.c
 router.post('/network/block/:targetId', auth_1.authMiddleware, userController.blockUser.bind(userController));
 router.post('/network/unblock/:targetId', auth_1.authMiddleware, userController.unblockUser.bind(userController));
 router.get('/network/info', auth_1.authMiddleware, userController.getNetworkInfo.bind(userController));
+// Messaging routes
+router.post('/messages/send/:targetId', auth_1.authMiddleware, userController.sendMessage.bind(userController));
+router.get('/messages/:targetId', auth_1.authMiddleware, userController.getMessages.bind(userController));
+router.get('/messages/:conversationId', auth_1.authMiddleware, userController.getMessagesByConversationId.bind(userController));
 exports.default = router;

@@ -1,4 +1,10 @@
-# Fix TypeScript Errors in auth.service.ts
+# TODO: Fix 404 on GET /api/users/messages/{conversationId}
 
-## Plan Steps:
-- [x] Step 1: Create TODO.md (done)\n- [x] Step 2: Edit src/services/auth.service.ts to fix filter callbacks in approveNetworkRequest and blockUser methods\n- [x] Step 3: Verify TypeScript compilation with no errors\n- [x] Step 4: Update TODO.md and complete task
+## Steps to complete:
+✅ 1. Update src/services/auth.service.ts - Add getMessagesByConversationId method
+✅ 2. Update src/controllers/user.controller.ts - Add getMessagesByConversationId controller method
+✅ 3. Update src/routes/user.routes.ts - Add GET /messages/:conversationId route
+✅ 4. Build project (npm run build)
+- [ ] 5. Test endpoint locally
+- [ ] 6. Complete task
+

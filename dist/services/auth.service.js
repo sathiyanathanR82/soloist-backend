@@ -204,15 +204,44 @@ class AuthService {
             throw new Error(`Failed to list users: ${error}`);
         }
     }
-    async sendNetworkRequest(fromUserId, toUserId) {
+    async sendNetworkRequest(fromUserId, toUserId, inviteMessage = '') {
         try {
+            const sender = await User_1.User.findOne({ uid: fromUserId });
             const recipient = await User_1.User.findOne({ uid: toUserId });
-            if (!recipient)
-                throw new Error('Recipient not found');
-            if (!recipient.network.request.includes(fromUserId) &&
+            if (!recipient || !sender)
+                throw new Error('User not found');
+            if (!recipient.network.request.some((r) => r.userId === fromUserId) &&
                 !recipient.network.myNetwork.includes(fromUserId)) {
-                recipient.network.request.push(fromUserId);
+                // Add to request list
+                recipient.network.request.push({ userId: fromUserId, inviteMessage });
+                // Store message in network.messages array if message is provided
+                if (inviteMessage) {
+                    const msg = {
+                        from: fromUserId,
+                        to: toUserId,
+                        text: inviteMessage,
+                        timestamp: new Date(),
+                        type: 'invite'
+                    };
+                    // Add message to recipient's messages
+                    let recipientConvIndex = recipient.network.messages?.findIndex((c) => c.withUserId === fromUserId);
+                    if (recipientConvIndex === -1 || recipientConvIndex === undefined) {
+                        recipientConvIndex = recipient.network.messages?.length || 0;
+                        recipient.network.messages = recipient.network.messages || [];
+                        recipient.network.messages.push({ withUserId: fromUserId, messages: [] });
+                    }
+                    recipient.network.messages[recipientConvIndex].messages.push(msg);
+                    // Add message to sender's messages
+                    let senderConvIndex = sender.network.messages?.findIndex((c) => c.withUserId === toUserId);
+                    if (senderConvIndex === -1 || senderConvIndex === undefined) {
+                        senderConvIndex = sender.network.messages?.length || 0;
+                        sender.network.messages = sender.network.messages || [];
+                        sender.network.messages.push({ withUserId: toUserId, messages: [] });
+                    }
+                    sender.network.messages[senderConvIndex].messages.push(msg);
+                }
                 await recipient.save();
+                await sender.save();
             }
         }
         catch (error) {
@@ -225,14 +254,41 @@ class AuthService {
             const requester = await User_1.User.findOne({ uid: requesterId });
             if (!user || !requester)
                 throw new Error('User or requester not found');
-            // Remove from request list
-            user.network.request = user.network.request.filter(id => id !== requesterId);
+            // Find invite message
+            const reqData = user.network.request.find((r) => r.userId === requesterId);
+            const inviteMessage = reqData?.inviteMessage || '';
+            // Remove from request list\n      user.network.request = user.network.request.filter((r: any) => r.userId !== requesterId);\n\n      // Remove any pending request from target to user\n      if (requester) {\n        requester.network.request = requester.network.request.filter((r: any) => r.userId !== userId);\n      }
             // Add to myNetwork for both
             if (!user.network.myNetwork.includes(requesterId)) {
                 user.network.myNetwork.push(requesterId);
             }
             if (!requester.network.myNetwork.includes(userId)) {
                 requester.network.myNetwork.push(userId);
+            }
+            // Start message thread with invite as first message (if any)
+            if (inviteMessage) {
+                const msg = {
+                    from: requesterId,
+                    to: userId,
+                    text: inviteMessage,
+                    timestamp: new Date(),
+                    type: 'invite'
+                };
+                // Check if conversation exists, else create new
+                let userConvIndex = user.network.messages?.findIndex((c) => c.withUserId === requesterId);
+                if (userConvIndex === -1) {
+                    userConvIndex = user.network.messages?.length || 0;
+                    user.network.messages = user.network.messages || [];
+                    user.network.messages.push({ withUserId: requesterId, messages: [] });
+                }
+                user.network.messages[userConvIndex].messages.push(msg);
+                let requesterConvIndex = requester.network.messages?.findIndex((c) => c.withUserId === userId);
+                if (requesterConvIndex === -1) {
+                    requesterConvIndex = requester.network.messages?.length || 0;
+                    requester.network.messages = requester.network.messages || [];
+                    requester.network.messages.push({ withUserId: userId, messages: [] });
+                }
+                requester.network.messages[requesterConvIndex].messages.push(msg);
             }
             await user.save();
             await requester.save();
@@ -246,12 +302,20 @@ class AuthService {
             const user = await User_1.User.findOne({ uid: userId });
             if (!user)
                 throw new Error('User not found');
-            user.network.request = user.network.request.filter(id => id !== requesterId);
+            user.network.request = user.network.request.filter((r) => r.userId !== requesterId);
             await user.save();
         }
         catch (error) {
             throw new Error(`Failed to reject network request: ${error}`);
         }
+    }
+    async getInviteMessages(user, targetUid) {
+        const conv = user.network.messages?.find((c) => c.withUserId === targetUid);
+        if (!conv || !conv.messages)
+            return [];
+        return conv.messages
+            .filter((msg) => msg.type === 'invite')
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     }
     async getNetworkInfo(userId) {
         try {
@@ -262,15 +326,25 @@ class AuthService {
             user.lastLogin = new Date();
             user.isOnline = true;
             await user.save();
+            const requestUids = user.network.request.map((r) => r.userId);
             const myNetworkRaw = await User_1.User.find({ uid: { $in: user.network.myNetwork } })
                 .select('uid firstName lastName email phone profilePic headline profileVisibility emailVisibility phoneVisibility showInNearbySearch');
-            const requestsRaw = await User_1.User.find({ uid: { $in: user.network.request } })
+            const requestsRaw = await User_1.User.find({ uid: { $in: requestUids } })
                 .select('uid firstName lastName email phone profilePic headline profileVisibility emailVisibility phoneVisibility showInNearbySearch');
             const removalRequestsRaw = await User_1.User.find({ uid: { $in: user.network.removalRequest } })
                 .select('uid firstName lastName email phone profilePic headline profileVisibility emailVisibility phoneVisibility showInNearbySearch');
             return {
+                createdAt: user.createdAt,
                 myNetwork: myNetworkRaw.map(u => this.sanitizeUser(u, userId)),
-                requests: requestsRaw.map(u => this.sanitizeUser(u, userId)),
+                requests: requestsRaw.map(u => {
+                    const reqData = user.network.request.find((r) => r.userId === u.uid);
+                    const inviteMessages = this.getInviteMessages(user, u.uid);
+                    return {
+                        ...this.sanitizeUser(u, userId),
+                        inviteMessage: reqData?.inviteMessage || '',
+                        inviteMessages: inviteMessages
+                    };
+                }),
                 removalRequests: removalRequestsRaw.map(u => this.sanitizeUser(u, userId)),
                 block: user.network.block
             };
@@ -335,7 +409,7 @@ class AuthService {
             if (!target)
                 throw new Error('Target user not found');
             // Remove the current user from the target user's incoming request list
-            target.network.request = target.network.request.filter(id => id !== userId);
+            target.network.request = target.network.request.filter((r) => r.userId !== userId);
             await target.save();
         }
         catch (error) {
@@ -355,9 +429,9 @@ class AuthService {
             // 2. Remove from myNetwork
             user.network.myNetwork = user.network.myNetwork.filter(id => id !== targetId);
             // 3. Remove from request list (both directions)
-            user.network.request = user.network.request.filter(id => id !== targetId);
+            user.network.request = user.network.request.filter(r => r.userId !== targetId);
             if (target) {
-                target.network.request = target.network.request.filter(id => id !== userId);
+                target.network.request = target.network.request.filter(r => r.userId !== userId);
                 target.network.myNetwork = target.network.myNetwork.filter(id => id !== userId);
                 await target.save();
             }
@@ -377,6 +451,75 @@ class AuthService {
         }
         catch (error) {
             throw new Error(`Failed to unblock user: ${error}`);
+        }
+    }
+    async sendMessage(senderId, targetId, text) {
+        try {
+            const sender = await User_1.User.findOne({ uid: senderId });
+            const target = await User_1.User.findOne({ uid: targetId });
+            if (!sender || !target)
+                throw new Error('User not found');
+            const msg = {
+                from: senderId,
+                to: targetId,
+                text: text.trim(),
+                timestamp: new Date(),
+                type: 'message'
+            };
+            // Add to sender's conversation with target
+            let senderConvIndex = sender.network.messages?.findIndex((c) => c.withUserId === targetId);
+            if (senderConvIndex === -1) {
+                senderConvIndex = sender.network.messages?.length || 0;
+                sender.network.messages = sender.network.messages || [];
+                sender.network.messages.push({ withUserId: targetId, messages: [] });
+            }
+            sender.network.messages[senderConvIndex].messages.push(msg);
+            // Add to target's conversation with sender
+            let targetConvIndex = target.network.messages?.findIndex((c) => c.withUserId === senderId);
+            if (targetConvIndex === -1) {
+                targetConvIndex = target.network.messages?.length || 0;
+                target.network.messages = target.network.messages || [];
+                target.network.messages.push({ withUserId: senderId, messages: [] });
+            }
+            target.network.messages[targetConvIndex].messages.push(msg);
+            await sender.save();
+            await target.save();
+        }
+        catch (error) {
+            throw new Error(`Failed to send message: ${error}`);
+        }
+    }
+    async getMessagesWith(userId, targetId, limit = 100) {
+        try {
+            const user = await User_1.User.findOne({ uid: userId });
+            if (!user)
+                throw new Error('User not found');
+            const conv = user.network.messages?.find((c) => c.withUserId === targetId);
+            if (!conv || !conv.messages)
+                return [];
+            return conv.messages
+                .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+                .slice(-limit);
+        }
+        catch (error) {
+            throw new Error(`Failed to get messages: ${error}`);
+        }
+    }
+    async getMessagesByConversationId(userId, conversationId, limit = 100) {
+        try {
+            const user = await User_1.User.findOne({ uid: userId });
+            if (!user)
+                throw new Error('User not found');
+            const conv = user.network.messages?.find((c) => c.withUserId === conversationId);
+            if (!conv || !conv.messages) {
+                throw new Error('Conversation not found');
+            }
+            return conv.messages
+                .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+                .slice(-limit);
+        }
+        catch (error) {
+            throw new Error(`Failed to get messages: ${error}`);
         }
     }
 }

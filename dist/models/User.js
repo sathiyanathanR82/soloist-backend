@@ -127,10 +127,16 @@ const userSchema = new mongoose_1.Schema({
             type: [String],
             default: []
         },
-        request: {
-            type: [String],
-            default: []
-        },
+        request: [{
+                userId: {
+                    type: String,
+                    required: true
+                },
+                inviteMessage: {
+                    type: String,
+                    default: ''
+                }
+            }],
         block: {
             type: [String],
             default: []
@@ -138,7 +144,27 @@ const userSchema = new mongoose_1.Schema({
         removalRequest: {
             type: [String],
             default: []
-        }
+        },
+        messages: [{
+                withUserId: {
+                    type: String,
+                    required: true
+                },
+                messages: [{
+                        from: String,
+                        to: String,
+                        text: String,
+                        timestamp: {
+                            type: Date,
+                            default: Date.now
+                        },
+                        type: {
+                            type: String,
+                            enum: ['invite', 'message'],
+                            default: 'message'
+                        }
+                    }]
+            }]
     },
     lastLogin: {
         type: Date,
