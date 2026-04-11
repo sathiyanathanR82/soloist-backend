@@ -16,7 +16,7 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
   passport.use(new FacebookStrategy({
     clientID: process.env.FACEBOOK_APP_ID,
     clientSecret: process.env.FACEBOOK_APP_SECRET,
-    callbackURL: process.env.FACEBOOK_CALLBACK_URL || 'https://soloist-backend-pxhl.onrender.com/api/auth/facebook/callback',
+    callbackURL: process.env.CALLBACK_URL || 'https://enola-undebilitating-elwanda.ngrok-free.dev' + '/api/auth/facebook/callback',
     profileFields: ['id', 'displayName', 'email', 'picture', 'first_name', 'last_name']
   }, async (accessToken, refreshToken, profile, done) => {
     try {
@@ -44,7 +44,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.GOOGLE_CALLBACK_URL || 'https://soloist-backend-pxhl.onrender.com/api/auth/google/callback'
+    callbackURL: process.env.CALLBACK_URL || 'https://enola-undebilitating-elwanda.ngrok-free.dev' + '/api/auth/google/callback'
   }, async (accessToken, refreshToken, profile, done) => {
     try {
       const { user, token, isNewUser } = await service.findOrCreateUser(
@@ -69,7 +69,7 @@ if (process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET) {
   passport.use(new MicrosoftStrategy({
     clientID: process.env.MICROSOFT_CLIENT_ID,
     clientSecret: process.env.MICROSOFT_CLIENT_SECRET,
-    callbackURL: process.env.MICROSOFT_CALLBACK_URL || 'https://soloist-backend-pxhl.onrender.com/api/auth/microsoft/callback',
+    callbackURL: process.env.CALLBACK_URL || 'https://enola-undebilitating-elwanda.ngrok-free.dev' + '/api/auth/microsoft/callback',
     scope: ['user.read', 'mail.read'],
     tenant: process.env.MICROSOFT_TENANT || 'common'
   }, async (accessToken: any, refreshToken: any, profile: { emails: any; }, done: (arg0: unknown, arg1: { user: any; token: any; isNewUser: boolean; } | undefined) => any) => {
@@ -98,7 +98,7 @@ if (process.env.YAHOO_CLIENT_ID && process.env.YAHOO_CLIENT_SECRET) {
     tokenURL: 'https://api.login.yahoo.com/oauth2/get_token',
     clientID: process.env.YAHOO_CLIENT_ID,
     clientSecret: process.env.YAHOO_CLIENT_SECRET,
-    callbackURL: process.env.YAHOO_CALLBACK_URL || 'https://soloist-backend-pxhl.onrender.com/api/auth/yahoo/callback',
+    callbackURL: process.env.CALLBACK_URL || 'https://enola-undebilitating-elwanda.ngrok-free.dev' + '/api/auth/yahoo/callback',
     scope: ['openid', 'profile', 'email']
   }, async (accessToken: string, refreshToken: string, profile: any, done: any) => {
     try {
