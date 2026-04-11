@@ -18,3 +18,4 @@ yarn-error.log*
 .env.test
 .history
 .env.production.local
+src/config/passport.ts
