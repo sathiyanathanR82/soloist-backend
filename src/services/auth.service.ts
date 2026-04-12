@@ -109,16 +109,23 @@ export class AuthService {
           firstName: profile.name?.givenName || profile.displayName?.split(' ')[0] || '',
           lastName: profile.name?.familyName || profile.displayName?.split(' ')[1] || '',
           profilePic: await this.generateBase64Image(profile.photos?.[0]?.value),
-          providers: [
-            {
-              name: provider,
-              id: profile.id,
-              email,
-              accessToken: profile.accessToken,
-              refreshToken: profile.refreshToken
-            }
-          ]
-        });
+        providers: [
+          {
+            name: provider,
+            id: profile.id,
+            email,
+            accessToken: profile.accessToken,
+            refreshToken: profile.refreshToken
+          }
+        ],
+        network: {
+          myNetwork: [],
+          request: [],
+          block: [],
+          removalRequest: [],
+          messages: []
+        }
+      });
       } else {
         if (!user.uid) {
           user.uid = crypto.randomUUID();
@@ -140,6 +147,24 @@ export class AuthService {
             accessToken: profile.accessToken,
             refreshToken: profile.refreshToken
           });
+        }
+
+        // Ensure network is fully initialized for validation
+        if (!user.network) {
+          user.network = {
+            myNetwork: [],
+            request: [],
+            block: [],
+            removalRequest: [],
+            messages: []
+          };
+        } else {
+          // Ensure arrays exist
+          user.network.myNetwork = user.network.myNetwork || [];
+          user.network.request = user.network.request || [];
+          user.network.block = user.network.block || [];
+          user.network.removalRequest = user.network.removalRequest || [];
+          user.network.messages = user.network.messages || [];
         }
       }
 
