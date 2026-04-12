@@ -4,9 +4,7 @@ import { Strategy as FacebookStrategy } from 'passport-facebook';
 import { Strategy as MicrosoftStrategy } from 'passport-microsoft';
 import { Strategy as YahooStrategy } from 'passport-oauth2';
 import axios from 'axios';
-import { User } from '../models/User';
-import { generateToken } from '../utils/jwt';
-import { Strategy as GoogleStrategy, Profile, VerifyCallback } from 'passport-google-oauth20';
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 
 const authService = require('../services/auth.service').AuthService;
 const service = new authService();
