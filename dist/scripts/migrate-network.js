@@ -21,13 +21,32 @@ async function migrate() {
                 network: {
                     myNetwork: [],
                     request: [],
-                    block: []
+                    block: [],
+                    removalRequest: [],
+                    messages: []
                 }
             }
         });
         console.log(`Migration complete!`);
         console.log(`Matched: ${result.matchedCount}`);
         console.log(`Modified: ${result.modifiedCount}`);
+        // Clean up invalid network request entries (missing userId)
+        console.log('Cleaning up invalid network request entries...');
+        const usersWithNetworkRequests = await User_1.User.find({
+            'network.request': { $exists: true }
+        });
+        let cleanedCount = 0;
+        for (const user of usersWithNetworkRequests) {
+            const originalLength = user.network.request?.length || 0;
+            user.network.request = (user.network.request || []).filter((req) => req && req.userId);
+            const newLength = user.network.request?.length || 0;
+            if (originalLength !== newLength) {
+                await user.save();
+                cleanedCount++;
+                console.log(`Cleaned user ${user._id}: removed ${originalLength - newLength} invalid entries`);
+            }
+        }
+        console.log(`Cleanup complete! Fixed ${cleanedCount} users.`);
     }
     catch (error) {
         console.error('Migration failed:', error);

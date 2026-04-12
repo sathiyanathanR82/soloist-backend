@@ -151,10 +151,12 @@ class AuthService {
                 else {
                     // Ensure arrays exist
                     user.network.myNetwork = user.network.myNetwork || [];
-                    user.network.request = user.network.request || [];
+                    // Filter out invalid request entries (must have userId)
+                    user.network.request = (user.network.request || []).filter((req) => req && req.userId);
                     user.network.block = user.network.block || [];
                     user.network.removalRequest = user.network.removalRequest || [];
-                    user.network.messages = user.network.messages || [];
+                    // Filter out invalid message entries (must have withUserId)
+                    user.network.messages = (user.network.messages || []).filter((msg) => msg && msg.withUserId);
                 }
             }
             user.lastLogin = new Date();
